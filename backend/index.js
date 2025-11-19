@@ -9,6 +9,7 @@ const healthRoutes = require('./routes/health');
 const studentsRoutes = require('./routes/students');
 const driveRoutes = require('./routes/drive');
 const usbDevicesRoutes = require('./routes/usb-devices');
+const logsRoutes = require('./routes/logs');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -37,6 +38,8 @@ app.use('/api/drive', driveRoutes);
 console.log('  ✓ /api/drive');
 app.use('/api', usbDevicesRoutes);
 console.log('  ✓ /api (USB devices)');
+app.use('/api/logs', logsRoutes);
+console.log('  ✓ /api/logs');
 
 // Root endpoint
 app.get('/', (req, res) => {

@@ -43,8 +43,7 @@ router.get('/google/url', (req, res) => {
       'openid',
       'email',
       'profile',
-      'https://www.googleapis.com/auth/drive.readonly',
-      'https://www.googleapis.com/auth/drive.file'
+      'https://www.googleapis.com/auth/drive' // Acceso completo a Drive (lectura y escritura)
     ];
     
     const authUrl = oauth2Client.generateAuthUrl({

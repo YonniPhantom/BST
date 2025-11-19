@@ -31,11 +31,19 @@
       {
         "from": "../backend",
         "to": "backend",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*",
+          "!data/**/*",
+          "!data"
+        ]
       },
       {
         "from": "../frontend/dist",
         "to": "frontend"
+      },
+      {
+        "from": "Manuales",
+        "to": "launcher/Manuales"
       }
     ],
     "win": {

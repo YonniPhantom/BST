@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, session, shell, Menu } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const waitOn = require('wait-on');
@@ -22,11 +22,19 @@ function startBackend() {
   console.log('Iniciando backend desde:', backendPath);
   console.log('Directorio backend:', backendDir);
 
+  // Pasar la ruta de userData al backend para logs y DB
+  const userDataPath = app.getPath('userData');
+  console.log('📁 User Data Path:', userDataPath);
+
   backendProcess = spawn('node', [backendPath], {
     stdio: 'inherit',
     shell: true,
     cwd: backendDir,
-    env: { ...process.env, NODE_ENV: isDev ? 'development' : 'production' }
+    env: { 
+      ...process.env, 
+      NODE_ENV: isDev ? 'development' : 'production',
+      USER_DATA_PATH: userDataPath
+    }
   });
 
   backendProcess.on('error', (err) => {
@@ -109,6 +117,82 @@ async function createWindow() {
   if (isDev) {
     mainWindow.webContents.openDevTools();
   }
+
+  // Crear menú de la aplicación
+  createMenu();
+}
+
+// Función para crear el menú de la aplicación
+function createMenu() {
+  const isDev = !app.isPackaged;
+  
+  // Determinar la ruta de los manuales
+  const manualesDir = isDev
+    ? path.join(__dirname, 'Manuales')
+    : path.join(process.resourcesPath, 'launcher', 'Manuales');
+  
+  const manualUsuarioPath = path.join(manualesDir, 'ManualUsuario.pdf');
+  const manualTecnicoPath = path.join(manualesDir, 'ManualTecnico.pdf');
+
+  const template = [
+    {
+      label: 'Archivo',
+      submenu: [
+        {
+          label: 'Abrir carpeta de logs',
+          click: async () => {
+            try {
+              // Obtener la ruta de logs del backend
+              const response = await fetch('http://localhost:3001/api/health/logs-path');
+              const data = await response.json();
+              
+              if (data.logsDir) {
+                // Abrir la carpeta en el explorador de archivos
+                shell.openPath(data.logsDir);
+              }
+            } catch (error) {
+              console.error('Error abriendo carpeta de logs:', error);
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Salir',
+          role: 'quit'
+        }
+      ]
+    },
+    {
+      label: 'Manuales',
+      submenu: [
+        {
+          label: 'Abrir Manual de Usuario',
+          click: async () => {
+            try {
+              console.log('Abriendo Manual de Usuario desde:', manualUsuarioPath);
+              await shell.openPath(manualUsuarioPath);
+            } catch (error) {
+              console.error('Error abriendo Manual de Usuario:', error);
+            }
+          }
+        },
+        {
+          label: 'Abrir Manual Técnico',
+          click: async () => {
+            try {
+              console.log('Abriendo Manual Técnico desde:', manualTecnicoPath);
+              await shell.openPath(manualTecnicoPath);
+            } catch (error) {
+              console.error('Error abriendo Manual Técnico:', error);
+            }
+          }
+        }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 }
 
 // Función para manejar OAuth con servidor local temporal

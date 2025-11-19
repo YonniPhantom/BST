@@ -9,6 +9,9 @@
 const path = require('path');
 const fs = require('fs');
 
+// Inicializar logger ANTES de cualquier otro log
+require('./lib/logger');
+
 // Set up environment
 const isDev = process.env.NODE_ENV !== 'production';
 const isElectron = process.versions && process.versions.electron;

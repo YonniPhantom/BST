@@ -1,0 +1,59 @@
+# Clean Installation Configuration
+# This file documents the clean installation behavior of BST
+
+## Data Persistence Strategy
+
+### What gets deleted on uninstall:
+- Database (SQLite): Stored in %APPDATA%/BST/app.db
+- localStorage: Stored in %APPDATA%/BST/Local Storage
+- Session tokens: Cleared on logout or expiration (30 days)
+
+### What is NOT included in the installer:
+- backend/data/ folder (excluded via electron-builder filter)
+- Excel file with student data
+- Any existing database files
+
+### What needs to be set up after installation:
+1. Login with Google account
+2. Create database (automatic on first student registration or manual via POST /api/health)
+3. Upload Excel file with student data (POST /api/health/upload-excel)
+
+## Technical Implementation
+
+### Database Location (backend/lib/db.js):
+- Development: backend/data/dev.db
+- Production (Electron): %APPDATA%/BST/app.db (via USER_DATA_PATH env var)
+- Fallback: backend/data/app.db
+
+### localStorage Cleanup (frontend/src/contexts/AuthContext.tsx):
+- On token expiration: localStorage.clear()
+- On logout: localStorage.clear()
+- On parse error: localStorage.clear()
+
+### Electron Packaging (launcher/package.json):
+- Excludes: backend/data/** (no database, no Excel file)
+- User data stored in: app.getPath('userData')
+
+## Endpoints for Initial Setup
+
+### Database:
+- GET /api/health - Check database status
+- POST /api/health - Create/initialize database
+
+### Excel File:
+- POST /api/health/upload-excel - Upload student data Excel file
+- GET /api/health/check-excel - Verify Excel file exists and is valid
+- POST /api/students/load-excel - Load Excel data into memory
+
+## Environment Variables
+
+### Passed from Electron to Backend:
+- USER_DATA_PATH: Path to Electron's userData directory
+- NODE_ENV: 'development' or 'production'
+
+## Security Notes
+
+- Tokens expire after 30 days
+- No sensitive data persists after uninstall
+- Excel file must be uploaded manually (not included in installer)
+- Database is created on-demand, not pre-populated

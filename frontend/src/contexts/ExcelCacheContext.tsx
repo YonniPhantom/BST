@@ -143,7 +143,46 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
 
         if (!syncResponse.ok) {
           const errorData = await syncResponse.json()
-          console.error('Error en respuesta de sync:', errorData)
+          console.error('❌ Error en respuesta de sync:', errorData)
+          console.error('❌ Status:', syncResponse.status)
+          console.error('❌ Error code:', errorData.code)
+          
+          // Solo cerrar sesión si es 401 (token expirado)
+          // NO cerrar sesión en 403 porque puede ser un problema temporal de permisos
+          if (syncResponse.status === 401) {
+            console.error('🚨 Token expirado. Cerrando sesión...')
+            
+            // Mostrar alerta al usuario
+            if (typeof window !== 'undefined' && (window as any).Swal) {
+              (window as any).Swal.fire({
+                icon: 'warning',
+                title: 'Sesión expirada',
+                text: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+                confirmButtonText: 'Cerrar sesión',
+                allowOutsideClick: false
+              }).then(() => {
+                const authContext = (window as any).__authContext
+                if (authContext && authContext.signOut) {
+                  authContext.signOut()
+                }
+              })
+            } else {
+              // Fallback si no hay Swal
+              const authContext = (window as any).__authContext
+              if (authContext && authContext.signOut) {
+                authContext.signOut()
+              }
+            }
+            
+            throw new Error('Session expired. Please sign in again.')
+          }
+          
+          // Para 403, solo mostrar el error sin cerrar sesión
+          if (syncResponse.status === 403) {
+            console.error('⚠️ Access denied:', errorData.error)
+            throw new Error(errorData.error || 'Access denied. Check file permissions.')
+          }
+          
           throw new Error(errorData.error || 'Error al sincronizar cambios con Drive')
         }
 

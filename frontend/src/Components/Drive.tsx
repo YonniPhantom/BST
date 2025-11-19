@@ -36,7 +36,7 @@ export default function Drive() {
         }
       })
       
-      // Si el token expiró, intentar refrescar y reintentar
+      // Si el token expiró o es inválido
       if (response.status === 401) {
         console.log('🔄 Token expirado, intentando refrescar...')
         await refreshAccessToken()
@@ -57,8 +57,17 @@ export default function Drive() {
         })
       }
       
+      // Si es 403, solo mostrar error sin cerrar sesión
+      // (puede ser un problema temporal de permisos, no necesariamente otra cuenta)
+      if (response.status === 403) {
+        console.error('⚠️ Access denied')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Access denied. Check file permissions.')
+      }
+      
       if (!response.ok) {
-        throw new Error('Error al obtener archivos de Drive')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Error al obtener archivos de Drive')
       }
       const data = await response.json()
       setFiles(data.files || [])

@@ -1,5 +1,6 @@
 const express = require('express');
 const { getDb, createDb } = require('../lib/db');
+const { logsDir } = require('../lib/logger');
 const router = express.Router();
 
 // GET /api/health - Check database connection
@@ -57,6 +58,14 @@ router.get('/test', (req, res) => {
     message: 'Health endpoint working correctly',
     timestamp: new Date().toISOString(),
     server: 'BST Backend'
+  });
+});
+
+// GET /api/health/logs-path - Get logs directory path
+router.get('/logs-path', (req, res) => {
+  res.json({
+    logsDir: logsDir,
+    message: 'Logs directory path'
   });
 });
 

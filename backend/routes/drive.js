@@ -301,11 +301,34 @@ router.post('/sync', authenticateToken, async (req, res) => {
     }
 
   } catch (error) {
-    console.error('Error syncing with Drive:', error);
+    console.error('❌ Error syncing with Drive:', error);
+    console.error('❌ Error code:', error.code);
+    console.error('❌ Error status:', error.status);
+    console.error('❌ Error message:', error.message);
     
-    if (error.code === 401) {
+    // 401: Token expirado
+    if (error.code === 401 || error.status === 401) {
       return res.status(401).json({
-        error: 'Authentication expired. Please refresh the page and sign in again.'
+        error: 'Authentication expired. Please sign in again.',
+        code: 'AUTH_EXPIRED'
+      });
+    }
+    
+    // 403: Sin permisos (puede ser archivo de otra cuenta o permisos insuficientes)
+    if (error.code === 403 || error.status === 403) {
+      console.error('⚠️ Error 403 - Access denied. Details:', error.errors);
+      return res.status(403).json({
+        error: 'Access denied. You may not have permission to edit this file.',
+        code: 'ACCESS_DENIED',
+        details: error.message
+      });
+    }
+    
+    // 404: Archivo no encontrado
+    if (error.code === 404 || error.status === 404) {
+      return res.status(404).json({
+        error: 'File not found in Google Drive.',
+        code: 'FILE_NOT_FOUND'
       });
     }
     

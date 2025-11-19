@@ -106,8 +106,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Función para cerrar sesión
   const signOut = () => {
     setUser(null)
+    
+    // Limpiar datos de autenticación
     localStorage.removeItem('auth_user')
     localStorage.removeItem('selectedExcelFile')
+    
+    // Limpiar TODOS los cachés de Excel (pueden ser de otra cuenta)
+    const keysToRemove: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith('excel_cache_')) {
+        keysToRemove.push(key)
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key))
+    
+    console.log('🧹 Sesión cerrada y caché limpiado')
   }
 
   // Función para refrescar el token de acceso
@@ -215,6 +229,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signOut,
     refreshAccessToken
   }
+
+  // Exponer signOut globalmente para otros contextos
+  useEffect(() => {
+    (window as any).__authContext = { signOut }
+  }, [])
 
   return (
     <AuthContext.Provider value={value}>
