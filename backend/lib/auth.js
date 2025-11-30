@@ -44,7 +44,7 @@ function authenticateToken(req, res, next) {
     id: decoded.id,
     email: decoded.email,
     hasAccessToken: !!decoded.accessToken,
-    accessTokenPrefix: decoded.accessToken?.substring(0, 20) + '...',
+    accessTokenPrefix: decoded.accessToken ? decoded.accessToken.substring(0, 20) + '...' : 'undefined',
     expiresAt: decoded.expiresAt,
     isExpired: decoded.expiresAt ? new Date(decoded.expiresAt) < new Date() : 'unknown'
   });

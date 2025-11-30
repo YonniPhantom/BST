@@ -6,7 +6,8 @@ const router = express.Router();
 // GET /api/drive/list - List Excel files from Google Drive
 router.get('/list', authenticateToken, async (req, res) => {
   try {
-    console.log('🔍 Intentando acceder a Drive con accessToken:', req.user.accessToken?.substring(0, 20) + '...');
+    const tokenPreview = req.user.accessToken ? req.user.accessToken.substring(0, 20) : 'undefined';
+    console.log('🔍 Intentando acceder a Drive con accessToken:', tokenPreview + '...');
     const drive = getAuthorizedDriveClient(req.user.accessToken);
 
     const response = await drive.files.list({
@@ -30,13 +31,13 @@ router.get('/list', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Error listing Drive files:', error);
-    
+
     if (error.code === 401) {
       return res.status(401).json({
         error: 'Authentication expired. Please refresh the page and sign in again.'
       });
     }
-    
+
     res.status(500).json({
       error: 'Failed to list Drive files',
       message: error.message
@@ -73,7 +74,7 @@ router.get('/content', authenticateToken, async (req, res) => {
     const workbook = XLSX.read(response.data, { type: 'array' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-    
+
     // Convert to JSON
     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
@@ -96,15 +97,15 @@ router.get('/content', authenticateToken, async (req, res) => {
     // Extract student data
     const students = [];
     if (headerRowIndex !== -1) {
-      const nombreCol = headers.findIndex(h => 
+      const nombreCol = headers.findIndex(h =>
         h && h.toString().toLowerCase().includes('nombre')
       );
-      const matriculaCol = headers.findIndex(h => 
-        h && (h.toString().toLowerCase().includes('control') || 
-              h.toString().toLowerCase().includes('matricula') ||
-              h.toString().toLowerCase().includes('num'))
+      const matriculaCol = headers.findIndex(h =>
+        h && (h.toString().toLowerCase().includes('control') ||
+          h.toString().toLowerCase().includes('matricula') ||
+          h.toString().toLowerCase().includes('num'))
       );
-      const carreraCol = headers.findIndex(h => 
+      const carreraCol = headers.findIndex(h =>
         h && h.toString().toLowerCase().includes('carrera')
       );
 
@@ -157,19 +158,19 @@ router.get('/content', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Error getting Drive file content:', error);
-    
+
     if (error.code === 401) {
       return res.status(401).json({
         error: 'Authentication expired. Please refresh the page and sign in again.'
       });
     }
-    
+
     if (error.code === 404) {
       return res.status(404).json({
         error: 'File not found or access denied'
       });
     }
-    
+
     res.status(500).json({
       error: 'Failed to get file content',
       message: error.message
@@ -200,12 +201,12 @@ router.post('/sync', authenticateToken, async (req, res) => {
 
       // Crear un nuevo workbook con los datos modificados
       const workbook = XLSX.utils.book_new();
-      
+
       // Procesar cada hoja
       excelData.sheetNames.forEach(sheetName => {
         const sheetData = excelData.sheets[sheetName];
         console.log(`📋 Procesando hoja "${sheetName}" con ${sheetData.length} filas`);
-        
+
         // Crear worksheet desde los datos
         const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
@@ -305,7 +306,7 @@ router.post('/sync', authenticateToken, async (req, res) => {
     console.error('❌ Error code:', error.code);
     console.error('❌ Error status:', error.status);
     console.error('❌ Error message:', error.message);
-    
+
     // 401: Token expirado
     if (error.code === 401 || error.status === 401) {
       return res.status(401).json({
@@ -313,7 +314,7 @@ router.post('/sync', authenticateToken, async (req, res) => {
         code: 'AUTH_EXPIRED'
       });
     }
-    
+
     // 403: Sin permisos (puede ser archivo de otra cuenta o permisos insuficientes)
     if (error.code === 403 || error.status === 403) {
       console.error('⚠️ Error 403 - Access denied. Details:', error.errors);
@@ -323,7 +324,7 @@ router.post('/sync', authenticateToken, async (req, res) => {
         details: error.message
       });
     }
-    
+
     // 404: Archivo no encontrado
     if (error.code === 404 || error.status === 404) {
       return res.status(404).json({
@@ -331,7 +332,7 @@ router.post('/sync', authenticateToken, async (req, res) => {
         code: 'FILE_NOT_FOUND'
       });
     }
-    
+
     res.status(500).json({
       error: 'Failed to sync with Google Drive',
       message: error.message
@@ -369,7 +370,7 @@ router.post('/add-row', authenticateToken, async (req, res) => {
     // Parse Excel
     const workbook = XLSX.read(response.data, { type: 'array' });
     const sheetName = workbook.SheetNames[0];
-    let jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { 
+    let jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
       header: 1,
       defval: ''
     });
@@ -377,19 +378,19 @@ router.post('/add-row', authenticateToken, async (req, res) => {
     // Find header row and column mapping (same logic as in students/register)
     let headerRowIndex = 0;
     let headerRow = [];
-    
+
     for (let i = 0; i < Math.min(5, jsonData.length); i++) {
       const row = jsonData[i] || [];
-      const rowText = row.map(cell => 
+      const rowText = row.map(cell =>
         cell ? cell.toString().trim().toUpperCase() : ''
       ).join(' ');
-      
+
       const hasNombre = rowText.includes('NOMBRE');
       const hasControl = rowText.includes('CONTROL') || rowText.includes('NUM');
       const hasCarrera = rowText.includes('CARRERA');
-      
+
       const matchCount = [hasNombre, hasControl, hasCarrera].filter(Boolean).length;
-      
+
       if (matchCount >= 2) {
         headerRowIndex = i;
         headerRow = row;
@@ -401,7 +402,7 @@ router.post('/add-row', authenticateToken, async (req, res) => {
     const columnMapping = {};
     headerRow.forEach((header, index) => {
       const headerText = header ? header.toString().trim().toUpperCase() : '';
-      
+
       if (headerText.includes('CONTROL') || (headerText.includes('NUM') && headerText.includes('DE'))) {
         columnMapping['matricula'] = index;
       } else if (headerText.includes('NOMBRE') && !headerText.includes('NUM')) {
@@ -432,7 +433,7 @@ router.post('/add-row', authenticateToken, async (req, res) => {
     // Add new row
     const newRowIndex = lastRowIndex + 1;
     const newRow = [];
-    
+
     while (jsonData.length <= newRowIndex) {
       jsonData.push([]);
     }
@@ -445,13 +446,13 @@ router.post('/add-row', authenticateToken, async (req, res) => {
     newRow[columnMapping['matricula']] = matricula;
     newRow[columnMapping['nombre']] = nombre;
     newRow[columnMapping['carrera']] = carrera;
-    
+
     if (columnMapping['hora_entrada'] !== undefined) {
       const now = new Date();
-      const timeString = now.toLocaleTimeString('es-MX', { 
-        hour: '2-digit', 
+      const timeString = now.toLocaleTimeString('es-MX', {
+        hour: '2-digit',
         minute: '2-digit',
-        hour12: false 
+        hour12: false
       });
       const [hours, minutes] = timeString.split(':').map(Number);
       const timeDecimal = (hours + minutes / 60) / 24;
@@ -462,7 +463,7 @@ router.post('/add-row', authenticateToken, async (req, res) => {
 
     // Convert back to Excel
     const newWorksheet = XLSX.utils.aoa_to_sheet(jsonData);
-    
+
     if (columnMapping['hora_entrada'] !== undefined) {
       const cellAddress = XLSX.utils.encode_cell({ r: newRowIndex, c: columnMapping['hora_entrada'] });
       if (newWorksheet[cellAddress]) {
@@ -470,7 +471,7 @@ router.post('/add-row', authenticateToken, async (req, res) => {
         newWorksheet[cellAddress].t = 'n';
       }
     }
-    
+
     workbook.Sheets[sheetName] = newWorksheet;
 
     // Upload updated file
@@ -498,13 +499,13 @@ router.post('/add-row', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Error adding row to Drive file:', error);
-    
+
     if (error.code === 401) {
       return res.status(401).json({
         error: 'Authentication expired. Please refresh the page and sign in again.'
       });
     }
-    
+
     res.status(500).json({
       error: 'Failed to add row to Google Drive file',
       message: error.message
@@ -551,13 +552,13 @@ router.post('/update', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Error updating Drive file:', error);
-    
+
     if (error.code === 401) {
       return res.status(401).json({
         error: 'Authentication expired. Please refresh the page and sign in again.'
       });
     }
-    
+
     res.status(500).json({
       error: 'Failed to update Google Drive file',
       message: error.message
@@ -607,7 +608,7 @@ router.post('/validate', authenticateToken, async (req, res) => {
     const workbook = XLSX.read(fileResponse.data, { type: 'array' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-    
+
     // Convert to JSON to analyze structure
     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
@@ -636,18 +637,18 @@ router.post('/validate', authenticateToken, async (req, res) => {
       console.log('📋 Encabezados encontrados:', headers);
       console.log('📍 Fila de encabezados:', headerRowIndex);
       // Validate required columns
-      const nombreCol = headers.findIndex(h => 
+      const nombreCol = headers.findIndex(h =>
         h && h.toString().toLowerCase().includes('nombre')
       );
       const matriculaCol = headers.findIndex(h => {
         if (!h) return false;
         const headerText = h.toString().toLowerCase();
-        return headerText.includes('control') || 
-               headerText.includes('matricula') ||
-               (headerText.includes('num') && headerText.includes('de')) ||
-               headerText === 'num de control'
+        return headerText.includes('control') ||
+          headerText.includes('matricula') ||
+          (headerText.includes('num') && headerText.includes('de')) ||
+          headerText === 'num de control'
       });
-      const carreraCol = headers.findIndex(h => 
+      const carreraCol = headers.findIndex(h =>
         h && h.toString().toLowerCase().includes('carrera')
       );
 
@@ -665,7 +666,7 @@ router.post('/validate', authenticateToken, async (req, res) => {
       }
 
       // Check if there's data after headers
-      const dataRows = jsonData.slice(headerRowIndex + 1).filter(row => 
+      const dataRows = jsonData.slice(headerRowIndex + 1).filter(row =>
         row && Array.isArray(row) && row.some(cell => cell !== null && cell !== undefined && cell !== '')
       );
 
@@ -695,7 +696,7 @@ router.post('/validate', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Error validating Drive file format:', error);
-    
+
     if (error.code === 401) {
       return res.status(401).json({
         isValid: false,
@@ -703,7 +704,7 @@ router.post('/validate', authenticateToken, async (req, res) => {
         warnings: []
       });
     }
-    
+
     if (error.code === 404) {
       return res.status(404).json({
         isValid: false,
@@ -711,7 +712,7 @@ router.post('/validate', authenticateToken, async (req, res) => {
         warnings: []
       });
     }
-    
+
     res.status(500).json({
       isValid: false,
       errors: ['Error interno del servidor al validar el archivo'],

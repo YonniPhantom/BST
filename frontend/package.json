@@ -5,85 +5,36 @@
   "version": "1.0.0",
   "type": "module",
   "author": "YonniPhantom",
-  "main": "dist/electron/main.cjs",
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:tsc && npm run build:vite",
-    "build:tsc": "tsc -b",
-    "build:vite": "vite build",
+    "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "electron:dev": "concurrently \"npm run dev\" \"npm run electron:start\"",
-    "electron:start": "wait-on http://localhost:5173 && npm run electron:build && electron .",
-    "electron:build": "npm run electron:compile && npm run electron:rename",
-    "electron:compile": "tsc electron/main.ts electron/preload.ts --outDir dist/electron --target ES2020 --module commonjs --esModuleInterop --allowSyntheticDefaultImports --skipLibCheck",
-    "electron:rename": "node -e \"const fs=require('fs'); fs.renameSync('dist/electron/main.js','dist/electron/main.cjs'); if(fs.existsSync('dist/electron/preload.js')){fs.copyFileSync('dist/electron/preload.js','dist/electron/preload.js')}\"",
-    "electron:prod": "npm run build && npm run electron:build && electron .",
-    "package": "npm run build && npm run electron:build && electron-builder"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.14",
     "lucide-react": "^0.545.0",
     "motion": "^12.23.22",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-router": "^7.9.4",
     "sweetalert2": "^11.25.1",
-    "tailwindcss": "^4.1.14",
+    "tailwindcss": "^3.4.17",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
-    "@types/node": "^24.6.0",
-    "@types/react": "^19.1.16",
-    "@types/react-dom": "^19.1.9",
-    "@vitejs/plugin-react": "^5.0.4",
-    "concurrently": "^8.2.2",
-    "electron": "^38.2.2",
-    "electron-builder": "^25.1.8",
-    "electron-is-dev": "^3.0.1",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
     "eslint": "^9.36.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.22",
-    "globals": "^16.4.0",
-    "nodemon": "^3.1.10",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.45.0",
-    "vite": "^7.1.7",
-    "wait-on": "^8.0.0"
-  },
-  "build": {
-    "appId": "com.yonniphantom.bst",
-    "productName": "BST",
-    "files": [
-      "dist/**/*",
-      "package.json"
-    ],
-    "directories": {
-      "output": "release"
-    },
-    "mac": {
-      "icon": "public/icon.png",
-      "category": "public.app-category.education",
-      "target": [
-        "dmg",
-        "zip"
-      ]
-    },
-    "win": {
-      "icon": "public/icon.png",
-      "target": [
-        "nsis",
-        "portable"
-      ]
-    },
-    "linux": {
-      "icon": "public/icon.png",
-      "category": "Education",
-      "target": [
-        "AppImage",
-        "deb"
-      ]
-    }
+    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
+    "eslint-plugin-react-refresh": "^0.4.7",
+    "globals": "^15.0.0",
+    "postcss": "^8.4.38",
+    "typescript": "~5.4.0",
+    "typescript-eslint": "^7.0.0",
+    "vite": "^5.4.11"
   }
 }

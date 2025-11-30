@@ -5,7 +5,7 @@ const router = express.Router();
 
 // GET /api/health - Check database connection
 router.get('/', (req, res) => {
-  try { 
+  try {
     const db = getDb();
     if (!db) {
       return res.status(404).json({
@@ -14,7 +14,7 @@ router.get('/', (req, res) => {
         action: "Use POST request to create database"
       });
     }
-    
+
     res.json({
       message: "Database connection successful",
       status: "healthy"
@@ -33,13 +33,13 @@ router.post('/', (req, res) => {
   try {
     console.log("Creating database...");
     const database = createDb();
-    
+
     if (!database) {
       return res.status(500).json({
         error: "Failed to create database connection"
       });
     }
-    
+
     res.json({
       message: "Database created and initialized successfully",
       status: "created"
@@ -74,12 +74,12 @@ router.get('/check-excel', (req, res) => {
   const fs = require('fs');
   const path = require('path');
   const XLSX = require('xlsx');
-  
+
   try {
     const excelPath = path.join(__dirname, '../data/alumnos.xlsx');
     console.log('🔍 Verificando Excel en ruta:', excelPath);
     console.log('📁 Archivo existe:', fs.existsSync(excelPath));
-    
+
     if (!fs.existsSync(excelPath)) {
       return res.status(404).json({
         error: "Excel file not found",
@@ -88,17 +88,17 @@ router.get('/check-excel', (req, res) => {
         exists: false
       });
     }
-    
+
     // Validate Excel format
     try {
       console.log('📖 Leyendo archivo Excel...');
       const workbook = XLSX.readFile(excelPath);
       console.log('📊 Hojas encontradas:', workbook.SheetNames);
-      
+
       const firstSheet = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheet];
       console.log('📄 Procesando hoja:', firstSheet);
-      
+
       // Check if worksheet has data
       if (!worksheet['!ref']) {
         return res.status(400).json({
@@ -108,55 +108,56 @@ router.get('/check-excel', (req, res) => {
           valid: false
         });
       }
-      
+
       // Extract headers from first row
       const range = XLSX.utils.decode_range(worksheet['!ref']);
       const headers = [];
-      
+
       for (let col = range.s.c; col <= range.e.c; col++) {
         const cell = worksheet[XLSX.utils.encode_cell({ r: 0, c: col })];
-        headers.push(cell?.v?.toString().trim() || "");
+        const value = (cell && cell.v) ? cell.v.toString().trim() : "";
+        headers.push(value);
       }
-      
+
       console.log('📋 Headers encontrados en Excel:', headers);
-      
+
       // Expected headers (flexible matching)
       const expectedHeaders = ["NUM CONTROL", "NOMBRE COMPLETO", "CARRERA"];
       const normalizedHeaders = headers.map(h => h.toUpperCase().trim());
       const normalizedExpected = expectedHeaders.map(h => h.toUpperCase());
-      
+
       console.log('🔍 Headers normalizados encontrados:', normalizedHeaders);
       console.log('🎯 Headers esperados:', normalizedExpected);
-      
+
       // Buscar coincidencias flexibles
       const headerMatches = {};
       normalizedExpected.forEach(expected => {
         const match = normalizedHeaders.find(header => {
           // Coincidencia exacta
           if (header === expected) return true;
-          
+
           // Coincidencias parciales comunes
           if (expected === 'NUM CONTROL' && (header.includes('CONTROL') || header.includes('MATRICULA'))) return true;
           if (expected === 'NOMBRE COMPLETO' && header.includes('NOMBRE')) return true;
           if (expected === 'CARRERA' && header.includes('CARRERA')) return true;
-          
+
           return false;
         });
-        
+
         if (match) {
           headerMatches[expected] = match;
         }
       });
-      
+
       const missingHeaders = normalizedExpected.filter(h => !headerMatches[h]);
-      
+
       console.log('✅ Headers coincidentes:', headerMatches);
       console.log('❌ Headers faltantes:', missingHeaders);
-      
+
       if (missingHeaders.length > 0) {
         // En lugar de fallar, intentar continuar con advertencia
         console.log('⚠️ Algunos headers no coinciden exactamente, pero continuando...');
-        
+
         return res.status(200).json({
           message: "Excel file found with warnings",
           path: excelPath,
@@ -169,7 +170,7 @@ router.get('/check-excel', (req, res) => {
           headerMatches: headerMatches
         });
       }
-      
+
       const stats = fs.statSync(excelPath);
       res.json({
         message: "Excel file found and valid",
@@ -180,7 +181,7 @@ router.get('/check-excel', (req, res) => {
         lastModified: stats.mtime,
         headers: headers
       });
-      
+
     } catch (excelError) {
       console.error("❌ Error validating Excel format:", excelError);
       return res.status(400).json({
@@ -191,7 +192,7 @@ router.get('/check-excel', (req, res) => {
         valid: false
       });
     }
-    
+
   } catch (error) {
     console.error("Error checking Excel file:", error);
     res.status(500).json({
@@ -206,7 +207,7 @@ router.post('/upload-excel', (req, res) => {
   const multer = require('multer');
   const path = require('path');
   const fs = require('fs');
-  
+
   // Configure multer for file upload
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -226,7 +227,7 @@ router.post('/upload-excel', (req, res) => {
       cb(null, 'alumnos.xlsx');
     }
   });
-  
+
   const upload = multer({
     storage: storage,
     fileFilter: (req, file, cb) => {
@@ -240,7 +241,7 @@ router.post('/upload-excel', (req, res) => {
       fileSize: 10 * 1024 * 1024 // 10MB limit
     }
   });
-  
+
   upload.single('excel')(req, res, (err) => {
     if (err) {
       return res.status(400).json({
@@ -248,13 +249,13 @@ router.post('/upload-excel', (req, res) => {
         message: err.message
       });
     }
-    
+
     if (!req.file) {
       return res.status(400).json({
         error: "No file uploaded"
       });
     }
-    
+
     res.json({
       message: "Excel file uploaded successfully",
       filename: req.file.filename,
@@ -268,38 +269,38 @@ router.post('/upload-excel', (req, res) => {
 router.get('/backups', (req, res) => {
   const fs = require('fs');
   const path = require('path');
-  
+
   try {
     const dataDir = path.join(__dirname, '../data');
     console.log('📁 Buscando backups en:', dataDir);
-    
+
     if (!fs.existsSync(dataDir)) {
       return res.json({
         backups: [],
         message: 'No backup directory found'
       });
     }
-    
+
     // Leer archivos del directorio
     const files = fs.readdirSync(dataDir);
     console.log('📂 Archivos encontrados:', files);
-    
+
     // Filtrar solo archivos de backup (que contengan .backup-)
-    const backupFiles = files.filter(file => 
+    const backupFiles = files.filter(file =>
       file.includes('.backup-') && file.startsWith('alumnos.xlsx')
     );
     console.log('🔍 Archivos de backup filtrados:', backupFiles);
-    
+
     // Obtener información detallada de cada backup
     const backups = backupFiles.map(filename => {
       const filePath = path.join(dataDir, filename);
       const stats = fs.statSync(filePath);
-      
+
       // Extraer timestamp del nombre del archivo
       const timestampMatch = filename.match(/\.backup-(\d+)/);
       const timestamp = timestampMatch ? parseInt(timestampMatch[1]) : null;
       const createdDate = timestamp ? new Date(timestamp) : stats.birthtime;
-      
+
       return {
         filename,
         path: filePath,
@@ -316,18 +317,18 @@ router.get('/backups', (req, res) => {
         sizeFormatted: formatFileSize(stats.size)
       };
     });
-    
+
     // Ordenar por fecha de creación (más reciente primero)
     backups.sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
-    
+
     console.log(`📋 Encontrados ${backups.length} backups`);
-    
+
     res.json({
       backups,
       count: backups.length,
       totalSize: backups.reduce((sum, backup) => sum + backup.size, 0)
     });
-    
+
   } catch (error) {
     console.error('❌ Error listando backups:', error);
     res.status(500).json({
@@ -341,10 +342,10 @@ router.get('/backups', (req, res) => {
 router.delete('/backups/:filename', (req, res) => {
   const fs = require('fs');
   const path = require('path');
-  
+
   try {
     const { filename } = req.params;
-    
+
     // Validar que el archivo sea realmente un backup
     if (!filename.includes('.backup-') || !filename.endsWith('.xlsx')) {
       return res.status(400).json({
@@ -352,28 +353,28 @@ router.delete('/backups/:filename', (req, res) => {
         message: 'Solo se pueden eliminar archivos de backup'
       });
     }
-    
+
     const filePath = path.join(__dirname, '../data', filename);
     console.log('🗑️ Eliminando backup:', filePath);
-    
+
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({
         error: 'Backup file not found',
         message: 'El archivo de backup no existe'
       });
     }
-    
+
     // Eliminar el archivo
     fs.unlinkSync(filePath);
-    
+
     console.log('✅ Backup eliminado exitosamente:', filename);
-    
+
     res.json({
       success: true,
       message: 'Backup eliminado exitosamente',
       filename: filename
     });
-    
+
   } catch (error) {
     console.error('❌ Error eliminando backup:', error);
     res.status(500).json({
@@ -387,11 +388,11 @@ router.delete('/backups/:filename', (req, res) => {
 router.delete('/backups', (req, res) => {
   const fs = require('fs');
   const path = require('path');
-  
+
   try {
     const dataDir = path.join(__dirname, '../data');
     console.log('🗑️ Eliminando todos los backups en:', dataDir);
-    
+
     if (!fs.existsSync(dataDir)) {
       return res.json({
         success: true,
@@ -399,18 +400,18 @@ router.delete('/backups', (req, res) => {
         deletedCount: 0
       });
     }
-    
+
     // Leer archivos del directorio
     const files = fs.readdirSync(dataDir);
-    
+
     // Filtrar solo archivos de backup
-    const backupFiles = files.filter(file => 
+    const backupFiles = files.filter(file =>
       file.includes('.backup-') && file.endsWith('.xlsx')
     );
-    
+
     let deletedCount = 0;
     const errors = [];
-    
+
     // Eliminar cada backup
     backupFiles.forEach(filename => {
       try {
@@ -423,16 +424,16 @@ router.delete('/backups', (req, res) => {
         errors.push({ filename, error: error.message });
       }
     });
-    
+
     console.log(`🗑️ Eliminados ${deletedCount} backups`);
-    
+
     res.json({
       success: true,
       message: `Se eliminaron ${deletedCount} archivos de backup`,
       deletedCount,
       errors: errors.length > 0 ? errors : undefined
     });
-    
+
   } catch (error) {
     console.error('❌ Error eliminando backups:', error);
     res.status(500).json({
@@ -445,11 +446,11 @@ router.delete('/backups', (req, res) => {
 // Función helper para formatear tamaño de archivo
 function formatFileSize(bytes) {
   if (bytes === 0) return '0 Bytes';
-  
+
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
@@ -457,18 +458,18 @@ function formatFileSize(bytes) {
 router.post('/cleanup-backups', (req, res) => {
   const { cleanOldBackups } = require('../lib/utils');
   const path = require('path');
-  
+
   try {
     const excelPath = path.join(__dirname, '../data/alumnos.xlsx');
     console.log('🧹 Iniciando limpieza manual de backups...');
-    
+
     cleanOldBackups(excelPath);
-    
+
     res.json({
       success: true,
       message: 'Limpieza de backups completada. Se mantuvieron solo los 5 más recientes.'
     });
-    
+
   } catch (error) {
     console.error('❌ Error en limpieza manual de backups:', error);
     res.status(500).json({
@@ -483,25 +484,25 @@ router.post('/restore-backup', (req, res) => {
   const fs = require('fs');
   const path = require('path');
   const { createBackup } = require('../lib/utils');
-  
+
   try {
     const { filename } = req.body;
-    
+
     if (!filename) {
       return res.status(400).json({
         error: 'Filename is required',
         message: 'Debe especificar el nombre del archivo de backup'
       });
     }
-    
+
     const dataDir = path.join(__dirname, '../data');
     const backupPath = path.join(dataDir, filename);
     const excelPath = path.join(dataDir, 'alumnos.xlsx');
-    
+
     console.log('🔄 Iniciando restauración de backup...');
     console.log('📁 Backup a restaurar:', backupPath);
     console.log('🎯 Archivo destino:', excelPath);
-    
+
     // Verificar que el backup existe
     if (!fs.existsSync(backupPath)) {
       return res.status(404).json({
@@ -509,29 +510,29 @@ router.post('/restore-backup', (req, res) => {
         message: `El archivo de backup "${filename}" no existe`
       });
     }
-    
+
     // Crear backup del archivo actual antes de restaurar
     console.log('💾 Creando backup del estado actual antes de restaurar...');
     const currentBackup = createBackup(excelPath);
-    
+
     if (!currentBackup) {
       console.warn('⚠️ No se pudo crear backup del estado actual, continuando...');
     } else {
       console.log('✅ Backup del estado actual creado:', currentBackup);
     }
-    
+
     // Restaurar el backup
     console.log('🔄 Restaurando backup...');
     fs.copyFileSync(backupPath, excelPath);
-    
+
     // Obtener información del backup restaurado
     const stats = fs.statSync(backupPath);
     const timestampMatch = filename.match(/\.backup-(\d+)/);
     const timestamp = timestampMatch ? parseInt(timestampMatch[1]) : null;
     const backupDate = timestamp ? new Date(timestamp) : stats.birthtime;
-    
+
     console.log('✅ Backup restaurado exitosamente');
-    
+
     res.json({
       success: true,
       message: `Excel restaurado desde el backup "${filename}"`,
@@ -542,7 +543,7 @@ router.post('/restore-backup', (req, res) => {
       },
       currentBackup: currentBackup ? path.basename(currentBackup) : null
     });
-    
+
   } catch (error) {
     console.error('❌ Error restaurando backup:', error);
     res.status(500).json({

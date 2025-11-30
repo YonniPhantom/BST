@@ -26,6 +26,14 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Static files (for serving Excel files if needed)
 app.use('/data', express.static(path.join(__dirname, '../data')));
 
+// Serve frontend static files at /app
+app.use('/app', express.static(path.join(__dirname, '../frontend/dist')));
+
+// Redirect root to /app
+app.get('/', (req, res) => {
+  res.redirect('/app');
+});
+
 // Routes
 console.log('📍 Registering routes...');
 app.use('/api/auth', authRoutes);
@@ -41,21 +49,6 @@ console.log('  ✓ /api (USB devices)');
 app.use('/api/logs', logsRoutes);
 console.log('  ✓ /api/logs');
 
-// Root endpoint
-app.get('/', (req, res) => {
-  res.json({
-    message: 'BST Backend API Server',
-    version: '1.0.0',
-    endpoints: {
-      auth: '/api/auth',
-      health: '/api/health',
-      students: '/api/students',
-      drive: '/api/drive',
-      usbDevices: '/api/check-usb-devices'
-    }
-  });
-});
-
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -65,12 +58,17 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
   res.status(404).json({
     error: 'Endpoint not found',
     path: req.originalUrl
   });
+});
+
+// Catch-all handler for SPA (serve index.html)
+app.get('/app/*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
 app.listen(PORT, () => {

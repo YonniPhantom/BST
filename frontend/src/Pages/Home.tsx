@@ -67,7 +67,7 @@ const Home = () => {
             allowEscapeKey: false,
             allowOutsideClick: false,
           }).then(() => {
-            window.electronAPI?.closeApp?.();
+            window.location.reload();
           });
           resolve(false);
         }
@@ -132,7 +132,7 @@ const Home = () => {
             allowEscapeKey: false,
             allowOutsideClick: false,
           }).then(() => {
-            window.electronAPI?.closeApp?.();
+            window.location.reload();
           });
           return;
         }
@@ -148,10 +148,10 @@ const Home = () => {
       } else {
         setStatus("❌ Error al procesar el archivo Excel.");
         await delay(1000);
-        
+
         // Intentar obtener más información del error
         let errorMessage = "Hubo un error al procesar el archivo. Verifica que el servidor esté funcionando.";
-        
+
         try {
           // Verificar si el servidor está disponible
           const healthCheck = await fetch(`${API_BASE_URL}/api/health`);
@@ -176,7 +176,7 @@ const Home = () => {
         if (retryResult.isConfirmed) {
           excelInputRef.current?.click();
         } else {
-          window.electronAPI?.closeApp?.();
+          window.location.reload();
         }
       }
     }
@@ -192,11 +192,11 @@ const Home = () => {
 
       let dbOk = true;
       let backendMessage = "No se encontró la base de datos. ¿Quieres crear una nueva?";
-      
+
       try {
         const res = await fetch(`${API_BASE_URL}/api/health`);
         dbOk = res.ok;
-        
+
         // Si no está OK, intentar obtener el mensaje del backend
         if (!res.ok && res.status === 404) {
           try {
@@ -227,7 +227,7 @@ const Home = () => {
         });
 
         if (!isConfirmed) {
-          window.electronAPI?.closeApp?.();
+          window.location.reload();
           return;
         }
 
@@ -253,7 +253,7 @@ const Home = () => {
             allowEscapeKey: false,
             allowOutsideClick: false,
           });
-          window.electronAPI?.closeApp?.();
+          window.location.reload();
           return;
         }
       } else {
@@ -267,7 +267,7 @@ const Home = () => {
 
       try {
         const excelRes = await fetch(`${API_BASE_URL}/api/health/check-excel`);
-        
+
         if (excelRes.ok) {
           // Excel encontrado y válido
           const data = await excelRes.json();
@@ -288,7 +288,7 @@ const Home = () => {
           });
 
           if (!result.isConfirmed) {
-            window.electronAPI?.closeApp?.();
+            window.location.reload();
             return;
           }
 
@@ -323,7 +323,7 @@ const Home = () => {
             excelInputRef.current?.click();
             return;
           } else {
-            window.electronAPI?.closeApp?.();
+            window.location.reload();
             return;
           }
         } else {
@@ -341,7 +341,7 @@ const Home = () => {
           allowEscapeKey: false,
           allowOutsideClick: false,
         }).then(() => {
-          window.electronAPI?.closeApp?.();
+          window.location.reload();
         });
         return;
       }
@@ -359,7 +359,7 @@ const Home = () => {
           allowEscapeKey: false,
           allowOutsideClick: false,
         }).then(() => {
-          window.electronAPI?.closeApp?.();
+          window.location.reload();
         });
         return;
       }
@@ -381,7 +381,7 @@ const Home = () => {
         allowEscapeKey: false,
         allowOutsideClick: false,
       }).then(() => {
-        window.electronAPI?.closeApp?.();
+        window.location.reload();
       });
     }
   };
