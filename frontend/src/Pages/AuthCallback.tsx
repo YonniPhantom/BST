@@ -11,8 +11,12 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Obtener parámetros de la URL
-        const urlParams = new URLSearchParams(window.location.search)
+        // Obtener parámetros de la URL (compatible con HashRouter)
+        // En HashRouter: http://localhost:3001/app/#/auth/callback?code=...
+        const hash = window.location.hash
+        const queryString = hash.includes('?') ? hash.split('?')[1] : ''
+        const urlParams = new URLSearchParams(queryString)
+
         const code = urlParams.get('code')
         const error = urlParams.get('error')
         const token = urlParams.get('token')
@@ -97,7 +101,7 @@ export default function AuthCallback() {
             <Loading size="lg" text={message} />
           </>
         )}
-        
+
         {status === 'success' && (
           <>
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -109,7 +113,7 @@ export default function AuthCallback() {
             <p className="text-gray-600">{message}</p>
           </>
         )}
-        
+
         {status === 'error' && (
           <>
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">

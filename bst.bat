@@ -1,5 +1,17 @@
 @echo off
 title BST Launcher - Windows 7
+
+:: Check for Administrator privileges
+NET SESSION >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [INFO] Requesting Administrator privileges...
+    powershell -Command "Start-Process '%~dpnx0' -Verb RunAs"
+    exit /b
+)
+
+:: Set working directory to script location
+cd /d "%~dp0"
+
 echo ==========================================
 echo      BST Application Launcher
 echo ==========================================

@@ -6,21 +6,21 @@ const router = express.Router();
 router.get('/signin', (req, res) => {
   try {
     const oauth2Client = createOAuth2Client();
-    
+
     const scopes = [
       'openid',
       'email',
       'profile',
       'https://www.googleapis.com/auth/drive'
     ];
-    
+
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline', // Importante: para obtener refresh token
       scope: scopes,
       prompt: 'consent', // Fuerza el consentimiento para obtener refresh token
       include_granted_scopes: true // Incluir permisos previamente otorgados
     });
-    
+
     res.json({
       authUrl,
       message: 'Redirect user to this URL for authentication'
@@ -38,21 +38,21 @@ router.get('/signin', (req, res) => {
 router.get('/google/url', (req, res) => {
   try {
     const oauth2Client = createOAuth2Client();
-    
+
     const scopes = [
       'openid',
       'email',
       'profile',
       'https://www.googleapis.com/auth/drive' // Acceso completo a Drive (lectura y escritura)
     ];
-    
+
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline', // Importante: para obtener refresh token
       scope: scopes,
       prompt: 'consent', // Fuerza el consentimiento para obtener refresh token
       include_granted_scopes: true // Incluir permisos previamente otorgados
     });
-    
+
     res.json({
       authUrl
     });
@@ -69,9 +69,9 @@ router.get('/google/url', (req, res) => {
 router.get('/callback/google', async (req, res) => {
   try {
     const { code, error, state } = req.query;
-    
+
     // Si viene con un redirect_uri en el state, usarlo (para Electron)
-    let redirectUri = 'http://localhost:5173/auth/callback';
+    let redirectUri = 'http://localhost:3001/app/#/auth/callback';
     if (state) {
       try {
         const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
@@ -82,30 +82,30 @@ router.get('/callback/google', async (req, res) => {
         console.log('Could not parse state, using default redirect');
       }
     }
-    
+
     if (error) {
       return res.redirect(`${redirectUri}?error=${encodeURIComponent(error)}`);
     }
-    
+
     if (!code) {
       return res.redirect(`${redirectUri}?error=no_code`);
     }
-    
+
     // Si el redirect es al servidor local de Electron (puerto 8080), solo pasar el código
     if (redirectUri.includes('localhost:8080')) {
       return res.redirect(`${redirectUri}?code=${encodeURIComponent(code)}`);
     }
-    
+
     // Si es para el frontend web, procesar el token completo
     const oauth2Client = createOAuth2Client();
     const { tokens } = await oauth2Client.getToken(code);
-    
+
     // Get user info
     oauth2Client.setCredentials(tokens);
     const { google } = require('googleapis');
     const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
     const { data: userInfo } = await oauth2.userinfo.get();
-    
+
     // Generate JWT token with user info and Google tokens
     const jwtPayload = {
       id: userInfo.id,
@@ -116,9 +116,9 @@ router.get('/callback/google', async (req, res) => {
       refreshToken: tokens.refresh_token,
       expiresAt: tokens.expiry_date
     };
-    
+
     const jwtToken = generateToken(jwtPayload);
-    
+
     // Redirect to frontend with token
     const finalRedirectUrl = `${redirectUri}?token=${encodeURIComponent(jwtToken)}&user=${encodeURIComponent(JSON.stringify({
       id: userInfo.id,
@@ -126,11 +126,11 @@ router.get('/callback/google', async (req, res) => {
       name: userInfo.name,
       picture: userInfo.picture
     }))}`;
-    
+
     res.redirect(finalRedirectUrl);
   } catch (error) {
     console.error('Error in Google OAuth callback:', error);
-    res.redirect(`http://localhost:5173/auth/error?error=${encodeURIComponent(error.message)}`);
+    res.redirect(`http://localhost:3001/app/#/auth/error?error=${encodeURIComponent(error.message)}`);
   }
 });
 
@@ -146,25 +146,25 @@ router.post('/exchange-code', async (req, res) => {
   console.log('📨 Request body:', req.body);
   try {
     const { code } = req.body;
-    
+
     if (!code) {
       console.log('❌ No code provided');
       return res.status(400).json({
         error: 'Authorization code required'
       });
     }
-    
+
     console.log('✅ Code received, exchanging for tokens...');
-    
+
     const oauth2Client = createOAuth2Client();
     const { tokens } = await oauth2Client.getToken(code);
-    
+
     // Get user info
     oauth2Client.setCredentials(tokens);
     const { google } = require('googleapis');
     const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
     const { data: userInfo } = await oauth2.userinfo.get();
-    
+
     // Generate JWT token with user info and Google tokens
     const jwtPayload = {
       id: userInfo.id,
@@ -175,9 +175,9 @@ router.post('/exchange-code', async (req, res) => {
       refreshToken: tokens.refresh_token,
       expiresAt: tokens.expiry_date
     };
-    
+
     const jwtToken = generateToken(jwtPayload);
-    
+
     res.json({
       token: jwtToken,
       user: {
@@ -201,20 +201,20 @@ router.post('/exchange-code', async (req, res) => {
 router.post('/refresh', async (req, res) => {
   try {
     const { token } = req.body;
-    
+
     if (!token) {
       return res.status(400).json({
         error: 'JWT token required'
       });
     }
-    
+
     const decoded = verifyToken(token);
     if (!decoded || !decoded.refreshToken) {
       return res.status(401).json({
         error: 'Invalid or expired token'
       });
     }
-    
+
     // Check if access token is still valid
     if (decoded.expiresAt && Date.now() < decoded.expiresAt) {
       return res.json({
@@ -222,10 +222,10 @@ router.post('/refresh', async (req, res) => {
         message: 'Token still valid'
       });
     }
-    
+
     // Refresh the access token
     const refreshedTokens = await refreshAccessToken(decoded.refreshToken);
-    
+
     // Generate new JWT with refreshed tokens (remove JWT-specific properties)
     const { iat, exp, ...cleanPayload } = decoded;
     const newPayload = {
@@ -234,9 +234,9 @@ router.post('/refresh', async (req, res) => {
       expiresAt: refreshedTokens.expiresIn,
       refreshToken: refreshedTokens.refreshToken
     };
-    
+
     const newJwtToken = generateToken(newPayload);
-    
+
     res.json({
       token: newJwtToken,
       expiresAt: refreshedTokens.expiresIn
@@ -255,14 +255,14 @@ router.get('/session', (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    
+
     if (!token) {
       return res.status(401).json({
         error: 'No token provided',
         authenticated: false
       });
     }
-    
+
     const decoded = verifyToken(token);
     if (!decoded) {
       return res.status(401).json({
@@ -270,7 +270,7 @@ router.get('/session', (req, res) => {
         authenticated: false
       });
     }
-    
+
     res.json({
       authenticated: true,
       user: {
