@@ -4,59 +4,10 @@ const path = require('path');
 const waitOn = require('wait-on');
 const http = require('http');
 
-let backendProcess = null;
 let mainWindow = null;
-let authWindow = null;
-
-function startBackend() {
-  const isDev = !app.isPackaged;
-  
-  const backendPath = isDev 
-    ? path.join(__dirname, '..', 'backend', 'start.js')
-    : path.join(process.resourcesPath, 'backend', 'start.js');
-
-  const backendDir = isDev
-    ? path.join(__dirname, '..', 'backend')
-    : path.join(process.resourcesPath, 'backend');
-
-  console.log('Iniciando backend desde:', backendPath);
-  console.log('Directorio backend:', backendDir);
-
-  // Pasar la ruta de userData al backend para logs y DB
-  const userDataPath = app.getPath('userData');
-  console.log('📁 User Data Path:', userDataPath);
-
-  backendProcess = spawn('node', [backendPath], {
-    stdio: 'inherit',
-    shell: true,
-    cwd: backendDir,
-    env: { 
-      ...process.env, 
-      NODE_ENV: isDev ? 'development' : 'production',
-      USER_DATA_PATH: userDataPath
-    }
-  });
-
-  backendProcess.on('error', (err) => {
-    console.error('Error al iniciar backend:', err);
-  });
-}
 
 async function createWindow() {
-  const BACKEND_URL = 'http://localhost:3001'; // Ajusta al puerto de tu backend
-
-  console.log('Esperando a que el backend esté listo...');
-  
-  try {
-    await waitOn({
-      resources: [BACKEND_URL],
-      timeout: 30000,
-      interval: 1000
-    });
-    console.log('Backend listo!');
-  } catch (err) {
-    console.error('Error esperando al backend:', err);
-  }
+  const BACKEND_URL = 'https://pacheco.yonniphantom.dev';
 
   const isDev = !app.isPackaged;
   const iconPath = isDev
@@ -88,7 +39,7 @@ async function createWindow() {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: http://localhost:* https://accounts.google.com https://www.google.com https://drive.google.com https://www.googleapis.com https://fonts.googleapis.com https://fonts.gstatic.com https://ssl.gstatic.com https://www.gstatic.com;"
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://pacheco.yonniphantom.dev https://accounts.google.com https://www.google.com https://drive.google.com https://www.googleapis.com https://fonts.googleapis.com https://fonts.gstatic.com https://ssl.gstatic.com https://www.gstatic.com;"
         ]
       }
     });
@@ -101,7 +52,7 @@ async function createWindow() {
   console.log('Cargando frontend desde:', frontendPath);
   console.log('isDev:', isDev);
   console.log('process.resourcesPath:', process.resourcesPath);
-  
+
   mainWindow.loadFile(frontendPath);
 
   // Manejar enlaces externos (Drive, etc.)
@@ -125,12 +76,12 @@ async function createWindow() {
 // Función para crear el menú de la aplicación
 function createMenu() {
   const isDev = !app.isPackaged;
-  
+
   // Determinar la ruta de los manuales
   const manualesDir = isDev
     ? path.join(__dirname, 'Manuales')
     : path.join(process.resourcesPath, 'launcher', 'Manuales');
-  
+
   const manualUsuarioPath = path.join(manualesDir, 'ManualUsuario.pdf');
   const manualTecnicoPath = path.join(manualesDir, 'ManualTecnico.pdf');
 
@@ -138,24 +89,6 @@ function createMenu() {
     {
       label: 'Archivo',
       submenu: [
-        {
-          label: 'Abrir carpeta de logs',
-          click: async () => {
-            try {
-              // Obtener la ruta de logs del backend
-              const response = await fetch('http://localhost:3001/api/health/logs-path');
-              const data = await response.json();
-              
-              if (data.logsDir) {
-                // Abrir la carpeta en el explorador de archivos
-                shell.openPath(data.logsDir);
-              }
-            } catch (error) {
-              console.error('Error abriendo carpeta de logs:', error);
-            }
-          }
-        },
-        { type: 'separator' },
         {
           label: 'Salir',
           role: 'quit'
@@ -188,6 +121,20 @@ function createMenu() {
           }
         }
       ]
+    },
+    {
+      label: 'Herramientas',
+      submenu: [
+        {
+          label: 'Abrir Consola',
+          accelerator: 'F12',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.webContents.openDevTools();
+            }
+          }
+        }
+      ]
     }
   ];
 
@@ -204,7 +151,7 @@ function createAuthWindow(authUrl) {
     // Crear servidor HTTP temporal en puerto aleatorio
     server = http.createServer((req, res) => {
       const url = new URL(req.url, 'http://localhost');
-      
+
       console.log('Callback received:', req.url);
 
       // Verificar si es el callback de Google
@@ -214,7 +161,7 @@ function createAuthWindow(authUrl) {
 
         // Enviar respuesta HTML al navegador
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        
+
         if (error) {
           res.end(`
             <!DOCTYPE html>
@@ -240,7 +187,7 @@ function createAuthWindow(authUrl) {
             </body>
             </html>
           `);
-          
+
           if (!serverClosed) {
             serverClosed = true;
             server.close();
@@ -248,7 +195,7 @@ function createAuthWindow(authUrl) {
           }
         } else if (code) {
           console.log('✓ Authorization code received:', code.substring(0, 20) + '...');
-          
+
           res.end(`
             <!DOCTYPE html>
             <html>
@@ -273,7 +220,7 @@ function createAuthWindow(authUrl) {
             </body>
             </html>
           `);
-          
+
           if (!serverClosed) {
             serverClosed = true;
             server.close();
@@ -294,7 +241,7 @@ function createAuthWindow(authUrl) {
             </body>
             </html>
           `);
-          
+
           if (!serverClosed) {
             serverClosed = true;
             server.close();
@@ -316,7 +263,7 @@ function createAuthWindow(authUrl) {
       const state = Buffer.from(JSON.stringify({
         redirectUri: `http://localhost:${OAUTH_PORT}/oauth/callback`
       })).toString('base64');
-      
+
       // Agregar state a la URL de auth
       const separator = authUrl.includes('?') ? '&' : '?';
       const modifiedAuthUrl = `${authUrl}${separator}state=${encodeURIComponent(state)}`;
@@ -368,19 +315,9 @@ ipcMain.on('close-app', () => {
 });
 
 app.whenReady().then(() => {
-  startBackend();
   createWindow();
 });
 
 app.on('window-all-closed', () => {
-  if (backendProcess) {
-    backendProcess.kill();
-  }
   app.quit();
-});
-
-app.on('quit', () => {
-  if (backendProcess) {
-    backendProcess.kill();
-  }
 });

@@ -29,15 +29,6 @@
     ],
     "extraResources": [
       {
-        "from": "../backend",
-        "to": "backend",
-        "filter": [
-          "**/*",
-          "!data/**/*",
-          "!data"
-        ]
-      },
-      {
         "from": "../frontend/dist",
         "to": "frontend"
       },
@@ -47,7 +38,10 @@
       }
     ],
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "../frontend/public/icon.png"
     },
     "mac": {

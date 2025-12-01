@@ -10,7 +10,7 @@ console.log('🔍 Verificando configuración del backend...\n');
 
 const requiredVars = [
   'GOOGLE_CLIENT_ID',
-  'GOOGLE_CLIENT_SECRET', 
+  'GOOGLE_CLIENT_SECRET',
   'GOOGLE_REDIRECT_URI',
   'JWT_SECRET'
 ];
@@ -43,6 +43,6 @@ if (allConfigured) {
 }
 
 console.log('\n🔗 URLs importantes:');
-console.log(`- Backend: http://localhost:${process.env.PORT || '3001'}`);
-console.log(`- Auth URL: http://localhost:${process.env.PORT || '3001'}/api/auth/google/url`);
-console.log(`- Callback: ${process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/auth/callback/google'}`);
+console.log(`- Backend: https://pacheco.yonniphantom.dev`);
+console.log(`- Auth URL: https://pacheco.yonniphantom.dev/api/auth/google/url`);
+console.log(`- Callback: ${process.env.GOOGLE_REDIRECT_URI || 'https://pacheco.yonniphantom.dev/api/auth/callback/google'}`);
