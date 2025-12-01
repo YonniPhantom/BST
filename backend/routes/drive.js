@@ -632,37 +632,65 @@ router.post('/validate', authenticateToken, async (req, res) => {
     }
 
     if (headerRowIndex === -1) {
-      errors.push('No se encontró una fila de encabezados válida. Debe contener columnas como "NOMBRE", "NUM CONTROL" y "CARRERA"');
+      errors.push('No se encontró una fila de encabezados válida. Debe contener columnas como "#", "Nombre", "Número Control", "Carrera" y "Hora Entrada"');
     } else {
       console.log('📋 Encabezados encontrados:', headers);
       console.log('📍 Fila de encabezados:', headerRowIndex);
-      // Validate required columns
+
+      // Validate required columns based on user request: #, Nombre, Número Control, Carrera, Hora Entrada
+
+      // 1. # (Index column)
+      const indexCol = headers.findIndex(h =>
+        h && (h.toString().trim() === '#' || h.toString().toLowerCase().includes('no.'))
+      );
+
+      // 2. Nombre
       const nombreCol = headers.findIndex(h =>
         h && h.toString().toLowerCase().includes('nombre')
       );
+
+      // 3. Número Control
       const matriculaCol = headers.findIndex(h => {
         if (!h) return false;
         const headerText = h.toString().toLowerCase();
         return headerText.includes('control') ||
           headerText.includes('matricula') ||
-          (headerText.includes('num') && headerText.includes('de')) ||
-          headerText === 'num de control'
+          (headerText.includes('número') && headerText.includes('control')) ||
+          (headerText.includes('numero') && headerText.includes('control'));
       });
+
+      // 4. Carrera
       const carreraCol = headers.findIndex(h =>
         h && h.toString().toLowerCase().includes('carrera')
       );
 
+      // 5. Hora Entrada
+      const horaCol = headers.findIndex(h =>
+        h && (h.toString().toLowerCase().includes('hora') || h.toString().toLowerCase().includes('entrada'))
+      );
+
       console.log('🔍 Columnas detectadas:');
+      console.log('  - #:', indexCol !== -1 ? `Columna ${indexCol} (${headers[indexCol]})` : 'NO ENCONTRADA');
       console.log('  - NOMBRE:', nombreCol !== -1 ? `Columna ${nombreCol} (${headers[nombreCol]})` : 'NO ENCONTRADA');
-      console.log('  - MATRICULA:', matriculaCol !== -1 ? `Columna ${matriculaCol} (${headers[matriculaCol]})` : 'NO ENCONTRADA');
+      console.log('  - NUMERO CONTROL:', matriculaCol !== -1 ? `Columna ${matriculaCol} (${headers[matriculaCol]})` : 'NO ENCONTRADA');
       console.log('  - CARRERA:', carreraCol !== -1 ? `Columna ${carreraCol} (${headers[carreraCol]})` : 'NO ENCONTRADA');
+      console.log('  - HORA ENTRADA:', horaCol !== -1 ? `Columna ${horaCol} (${headers[horaCol]})` : 'NO ENCONTRADA');
 
       // Check required columns
+      if (indexCol === -1) {
+        errors.push('Falta la columna "#"');
+      }
       if (nombreCol === -1) {
-        errors.push('Falta la columna "NOMBRE" o similar');
+        errors.push('Falta la columna "Nombre"');
       }
       if (matriculaCol === -1) {
-        errors.push('Falta la columna "NUM DE CONTROL" o "MATRICULA" o similar');
+        errors.push('Falta la columna "Número Control"');
+      }
+      if (carreraCol === -1) {
+        errors.push('Falta la columna "Carrera"');
+      }
+      if (horaCol === -1) {
+        errors.push('Falta la columna "Hora Entrada"');
       }
 
       // Check if there's data after headers

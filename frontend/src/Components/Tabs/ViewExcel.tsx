@@ -5,7 +5,7 @@ import { useSelectedFile } from '../../hooks/useSelectedFile'
 import { useExcelCache } from '../../contexts/ExcelCacheContext'
 import { motion } from 'motion/react'
 import { FileSpreadsheet, RefreshCw, AlertCircle, Eye, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Edit3, Clock, Save, Wifi, WifiOff } from 'lucide-react'
- 
+
 
 export default function ViewExcel() {
   const { selectedFile, hasSelectedFile } = useSelectedFile()
@@ -20,23 +20,23 @@ export default function ViewExcel() {
 
   // Funciones helper para tracking de cambios
   const getCellKey = (rowIndex: number, colIndex: number) => `${rowIndex}-${colIndex}`
-  
+
   const isCellChanged = (rowIndex: number, colIndex: number) => {
     return changedCells.has(getCellKey(rowIndex, colIndex))
   }
-  
+
   const isRowNew = (rowIndex: number) => {
     return newRows.has(rowIndex)
   }
-  
+
   const markCellAsChanged = (rowIndex: number, colIndex: number) => {
     setChangedCells(prev => new Set(prev).add(getCellKey(rowIndex, colIndex)))
   }
-  
+
   // const markRowAsNew = (rowIndex: number) => {
   //   setNewRows(prev => new Set(prev).add(rowIndex))
   // }
-  
+
   const clearChanges = () => {
     setChangedCells(new Set())
     setNewRows(new Set())
@@ -47,7 +47,7 @@ export default function ViewExcel() {
     if (!row || row.length === 0) return false
     const firstCell = row[0]
     if (!firstCell || typeof firstCell !== 'string') return false
-    
+
     // Patrones para detectar fechas en español
     const datePatterns = [
       /^\d{1,2}\s+de\s+\w+\s+del?\s+\d{4}$/i, // "13 de octubre del 2025"
@@ -55,7 +55,7 @@ export default function ViewExcel() {
       /^\d{4}-\d{2}-\d{2}$/,                   // "2025-10-13"
       /^\w+,?\s+\d{1,2}\s+de\s+\w+\s+del?\s+\d{4}$/i // "Domingo, 13 de octubre del 2025"
     ]
-    
+
     return datePatterns.some(pattern => pattern.test(firstCell.trim()))
   }
 
@@ -80,7 +80,7 @@ export default function ViewExcel() {
       const timer = setTimeout(() => {
         ensureCurrentDateRow()
       }, 500)
-      
+
       return () => clearTimeout(timer)
     }
   }, [cachedData, activeSheet, ensureCurrentDateRow])
@@ -97,7 +97,7 @@ export default function ViewExcel() {
     if (!hasSelectedFile || !cacheStatus.hasUnsavedChanges) return
 
     console.log('📅 Configurando auto-sync cada 5 minutos para cambios pendientes')
-    
+
     const interval = setInterval(() => {
       if (cacheStatus.hasUnsavedChanges) {
         console.log('🔄 Auto-sync ejecutándose - hay cambios pendientes')
@@ -135,12 +135,12 @@ export default function ViewExcel() {
   const getPaginatedData = () => {
     const data = getCurrentSheetData()
     if (!data || !Array.isArray(data)) return []
-    
+
     // Reversar los datos para mostrar los más recientes primero (excluyendo headers)
     const headers = data.length > 0 ? [data[0]] : []
     const dataRows = data.length > 1 ? data.slice(1).reverse() : []
     const reversedData = [...headers, ...dataRows]
-    
+
     const startIndex = (currentPage - 1) * rowsPerPage
     const endIndex = startIndex + rowsPerPage
     return reversedData.slice(startIndex, endIndex)
@@ -155,6 +155,7 @@ export default function ViewExcel() {
   const getColumnHeaders = () => {
     // Definir las columnas específicas que queremos mostrar
     return [
+      '#',
       'NOMBRE',
       'NUM CONTROL',
       'CARRERA',
@@ -166,31 +167,33 @@ export default function ViewExcel() {
     const data = getPaginatedData()
     if (!data || !Array.isArray(data)) return []
     const rawData = data.length > 1 ? data.slice(1) : []
-    
+
     // Mapear los datos del Excel incluyendo información de tipo de fila
     return rawData.map((row, index) => {
       // Verificar si es una fila de fecha
       const isDate = isDateRow(row)
-      
+
       if (isDate) {
         // Para filas de fecha, mostrar la fecha en la primera columna y vacío en las demás
         return {
-          data: [row[0] || '', '', '', ''],
+          data: [row[0] || '', '', '', '', ''],
           isDateRow: true,
           originalRow: row,
           rowIndex: index
         }
       } else {
         // Para filas normales, mapear según la estructura del Excel
-        const mappedRow = new Array(4).fill('')
-        
+        // Columnas esperadas: # (0), Nombre (1), Número Control (2), Carrera (3), Hora Entrada (4)
+        const mappedRow = new Array(5).fill('')
+
         if (row && Array.isArray(row)) {
-          mappedRow[0] = row[0] || '' // NOMBRE (1ª columna del Excel - índice 0)
-          mappedRow[1] = row[1] || '' // NUM CONTROL (2ª columna del Excel - índice 1)
-          mappedRow[2] = row[3] || '' // CARRERA (4ª columna del Excel - índice 3)
-          mappedRow[3] = row[6] || '' // HORA ENTRADA (7ª columna del Excel - índice 6)
+          mappedRow[0] = row[0] || '' // # (1ª columna del Excel - índice 0)
+          mappedRow[1] = row[1] || '' // NOMBRE (2ª columna del Excel - índice 1)
+          mappedRow[2] = row[2] || '' // NUM CONTROL (3ª columna del Excel - índice 2)
+          mappedRow[3] = row[3] || '' // CARRERA (4ª columna del Excel - índice 3)
+          mappedRow[4] = row[4] || '' // HORA ENTRADA (5ª columna del Excel - índice 4)
         }
-        
+
         return {
           data: mappedRow,
           isDateRow: false,
@@ -249,8 +252,8 @@ export default function ViewExcel() {
 
   // Función para detectar si una columna es de tiempo
   const isTimeColumn = (colIndex: number): boolean => {
-    // La columna 6 (índice 6) es la columna "Hora"
-    return colIndex === 6
+    // La columna 4 (índice 4) es la columna "Hora Entrada" en la nueva estructura
+    return colIndex === 4
   }
 
   // Función para validar y formatear tiempo
@@ -262,10 +265,10 @@ export default function ViewExcel() {
 
     // Limpiar el valor de espacios y caracteres extraños
     const cleanValue = value.replace(/\s/g, '').trim()
-    
+
     // Intentar diferentes patrones de tiempo
     let hours, minutes
-    
+
     // Patrón HH:MM o H:MM
     let match = cleanValue.match(/^(\d{1,2}):(\d{2})$/)
     if (match) {
@@ -286,7 +289,7 @@ export default function ViewExcel() {
         }
       }
     }
-    
+
     if (hours !== undefined && minutes !== undefined) {
       // Validar rangos
       if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
@@ -294,7 +297,7 @@ export default function ViewExcel() {
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
       }
     }
-    
+
     // Si no es un tiempo válido, devolver el valor original
     return value
   }
@@ -314,17 +317,16 @@ export default function ViewExcel() {
   // Función para mapear el índice de columna mostrada al índice real del Excel
   const mapDisplayColumnToExcelColumn = (displayColIndex: number): number => {
     // Mapeo de nuestras columnas mostradas a las columnas reales del Excel
-    // Excel: Nombre, Número de control, Préstamo, Carrera, Correo, Teléfono, Hora de entrada
+    // Nueva estructura: #, Nombre, Número Control, Carrera, Hora Entrada
+    // Indices Excel: 0, 1, 2, 3, 4
     const columnMapping = [
-      0, // NOMBRE -> columna 0 del Excel
-      1, // NUM. DE CONTROL -> columna 1 del Excel
-      2, // PRÉSTAMO -> columna 2 del Excel
+      0, // # -> columna 0 del Excel
+      1, // Nombre -> columna 1 del Excel
+      2, // Número Control -> columna 2 del Excel
       3, // Carrera -> columna 3 del Excel
-      4, // Correo -> columna 4 del Excel
-      5, // Tel. -> columna 5 del Excel
-      6  // Hora -> columna 6 del Excel
+      4  // Hora Entrada -> columna 4 del Excel
     ]
-    return columnMapping[displayColIndex] || displayColIndex
+    return columnMapping[displayColIndex] !== undefined ? columnMapping[displayColIndex] : displayColIndex
   }
 
   // Función para guardar cambios en una celda
@@ -347,53 +349,21 @@ export default function ViewExcel() {
 
   }, [selectedFile, activeSheet, updateCellValue, currentPage, rowsPerPage])
 
-  // Función para guardar en el servidor
-  // const saveToServer = async (rowIndex: number, colIndex: number, newValue: string) => {
-  //   if (!selectedFile || !activeSheet) return
-
-  //   setSaving(true)
-
-  //   try {
-  //     const response = await fetch('/api/drive/update', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({
-  //         fileId: selectedFile.id,
-  //         sheetName: activeSheet,
-  //         rowIndex,
-  //         columnIndex: colIndex,
-  //         newValue
-  //       })
-  //     })
-
-  //     if (!response.ok) {
-  //       throw new Error('Error al guardar')
-  //     }
-
-  //     markAsSaved()
-  //   } catch (error) {
-  //     console.error('Error saving:', error)
-  //     setSaveError('Error al guardar los cambios')
-  //   }
-  // }
-
   // Manejar el envío del formulario de edición
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (editingCell) {
       let processedValue = editValue
-      
+
       // Si es una columna de tiempo, validar y formatear
       if (isTimeColumn(editingCell.col)) {
         processedValue = validateAndFormatTime(editValue)
         setEditValue(processedValue) // Actualizar el valor mostrado
       }
-      
+
       // Marcar la celda como cambiada
       markCellAsChanged(editingCell.row, editingCell.col)
-      
+
       saveCellEdit(editingCell.row, editingCell.col, processedValue)
       cancelEditing()
     }
@@ -504,7 +474,7 @@ export default function ViewExcel() {
                 <span>Modo offline</span>
               </div>
             )}
-            
+
             {/* Indicador de edición */}
             <div className="flex items-center space-x-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">
               <Edit3 className="w-4 h-4" />
@@ -517,11 +487,10 @@ export default function ViewExcel() {
           <button
             onClick={syncWithDrive}
             disabled={cacheStatus.isSaving}
-            className={`${
-              isOfflineMode 
-                ? 'bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400' 
+            className={`${isOfflineMode
+                ? 'bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400'
                 : 'bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400'
-            } text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2`}
+              } text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2`}
             title={isOfflineMode ? 'Intentar reconectar y sincronizar' : 'Sincronizar con Google Drive'}
           >
             {isOfflineMode ? (
@@ -531,7 +500,7 @@ export default function ViewExcel() {
             )}
             <span>{isOfflineMode ? 'Reconectar' : 'Sincronizar'}</span>
           </button>
-          
+
           {/* Botón de guardado manual */}
           <button
             onClick={() => {
@@ -548,7 +517,7 @@ export default function ViewExcel() {
             <Save className={`w-4 h-4 ${cacheStatus.isSaving ? 'animate-spin' : ''}`} />
             <span>Guardar</span>
           </button>
-          
+
           {/* Indicador de estado */}
           <div className="flex items-center space-x-2 text-sm">
             {cacheStatus.hasUnsavedChanges ? (
@@ -588,8 +557,8 @@ export default function ViewExcel() {
                   setCurrentPage(1)
                 }}
                 className={`px-4 py-2 font-medium transition-colors duration-200 border-b-2 ${activeSheet === sheetName
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-800'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-800'
                   }`}
               >
                 {sheetName}
@@ -682,8 +651,8 @@ export default function ViewExcel() {
                         <td className="px-4 py-3 text-sm text-gray-500 font-medium">
                           📅
                         </td>
-                        <td 
-                          colSpan={headers.length} 
+                        <td
+                          colSpan={headers.length}
                           className="px-4 py-3 text-sm font-semibold text-blue-800 bg-blue-100 text-center"
                         >
                           {rowData.data[0]}
@@ -691,7 +660,7 @@ export default function ViewExcel() {
                       </tr>
                     )
                   }
-                  
+
                   // Fila normal de datos
                   return (
                     <tr key={rowIndex} className="hover:bg-gray-50">
@@ -714,42 +683,41 @@ export default function ViewExcel() {
                         return (
                           <td
                             key={colIndex}
-                            className={`px-4 py-3 text-sm max-w-xs relative group ${
-                              isRowModified 
-                                ? 'bg-orange-50 border-l-2 border-orange-400' 
-                                : isCellModified 
-                                  ? 'bg-yellow-50 border-l-2 border-yellow-400' 
+                            className={`px-4 py-3 text-sm max-w-xs relative group ${isRowModified
+                                ? 'bg-orange-50 border-l-2 border-orange-400'
+                                : isCellModified
+                                  ? 'bg-yellow-50 border-l-2 border-yellow-400'
                                   : ''
-                            }`}
-                          title={formattedValue}
-                        >
-                          {isEditing ? (
-                            <form onSubmit={handleEditSubmit} className="w-full">
-                              <input
-                                type="text"
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                onKeyDown={handleEditKeyDown}
-                                onBlur={() => handleEditSubmit({ preventDefault: () => { } } as React.FormEvent)}
-                                className="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder={isTimeColumn(colIndex) ? "HH:MM (ej: 08:30)" : ""}
-                                autoFocus
-                              />
-                            </form>
-                          ) : (
-                            <div
-                              className="cursor-pointer hover:bg-gray-100 rounded px-2 py-1 -mx-2 -my-1 flex items-center justify-between group"
-                              onClick={() => startEditing(rowIndex, colIndex, cellValue)}
-                            >
-                              <span className="truncate">{formattedValue}</span>
-                              <Edit3 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0" />
-                            </div>
-                          )}
+                              }`}
+                            title={formattedValue}
+                          >
+                            {isEditing ? (
+                              <form onSubmit={handleEditSubmit} className="w-full">
+                                <input
+                                  type="text"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onKeyDown={handleEditKeyDown}
+                                  onBlur={() => handleEditSubmit({ preventDefault: () => { } } as React.FormEvent)}
+                                  className="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder={isTimeColumn(colIndex) ? "HH:MM (ej: 08:30)" : ""}
+                                  autoFocus
+                                />
+                              </form>
+                            ) : (
+                              <div
+                                className="cursor-pointer hover:bg-gray-100 rounded px-2 py-1 -mx-2 -my-1 flex items-center justify-between group"
+                                onClick={() => startEditing(rowIndex, colIndex, cellValue)}
+                              >
+                                <span className="truncate">{formattedValue}</span>
+                                <Edit3 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0" />
+                              </div>
+                            )}
 
-                          {(isCellModified || isRowModified) && (
-                            <div className="absolute top-1 right-1 w-2 h-2 bg-yellow-400 rounded-full" title="Cambios sin guardar" />
-                          )}
-                        </td>
+                            {(isCellModified || isRowModified) && (
+                              <div className="absolute top-1 right-1 w-2 h-2 bg-yellow-400 rounded-full" title="Cambios sin guardar" />
+                            )}
+                          </td>
                         )
                       })}
                     </tr>

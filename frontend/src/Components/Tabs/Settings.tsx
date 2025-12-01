@@ -13,7 +13,7 @@ export default function Settings() {
         type: 'success' | 'error' | 'info';
         message: string;
     } | null>(null)
-    
+
     // Estado para backups
     const [backups, setBackups] = useState<any[]>([])
     const [isLoadingBackups, setIsLoadingBackups] = useState(false)
@@ -24,7 +24,7 @@ export default function Settings() {
         type: 'success' | 'error' | 'info';
         message: string;
     } | null>(null)
-    
+
     // Estado para conversión de horas
     const [isConvertingTimes, setIsConvertingTimes] = useState(false)
     const [timeConversionResult, setTimeConversionResult] = useState<{
@@ -45,20 +45,20 @@ export default function Settings() {
             // Procesar cada hoja
             cachedData.sheetNames.forEach(sheetName => {
                 const originalData = cachedData.sheets[sheetName] || []
-                 
+
                 // Filtrar filas que no estén completamente vacías
                 const cleanedData = originalData.filter((row: any[], index: number) => {
                     // Mantener la primera fila (headers) siempre
                     if (index === 0) return true
-                    
+
                     // Una fila se considera vacía si todos sus valores son null, undefined, o string vacío
-                    const isEmpty = !row || row.every(cell => 
-                        cell === null || 
-                        cell === undefined || 
+                    const isEmpty = !row || row.every(cell =>
+                        cell === null ||
+                        cell === undefined ||
                         (typeof cell === 'string' && cell.trim() === '') ||
                         cell === ''
                     )
-                    
+
                     if (isEmpty) {
                         totalRowsRemoved++
                         return false
@@ -77,7 +77,7 @@ export default function Settings() {
             } else {
                 // Guardar en caché local
                 saveToCache(newData)
-                
+
                 setCleanupResult({
                     type: 'success',
                     message: `Se eliminaron ${totalRowsRemoved} filas vacías. Los cambios se sincronizarán automáticamente.`
@@ -92,7 +92,7 @@ export default function Settings() {
             })
         } finally {
             setIsCleaningRows(false)
-            
+
             // Limpiar mensaje después de 5 segundos
             setTimeout(() => {
                 setCleanupResult(null)
@@ -118,7 +118,7 @@ export default function Settings() {
                 const totalMinutes = Math.round(decimal * 24 * 60)
                 const hours = Math.floor(totalMinutes / 60)
                 const minutes = totalMinutes % 60
-                
+
                 return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
             }
 
@@ -161,7 +161,7 @@ export default function Settings() {
             } else {
                 // Guardar en caché local
                 saveToCache(newData)
-                
+
                 setTimeConversionResult({
                     type: 'success',
                     message: `Se convirtieron ${totalCellsConverted} celdas de formato decimal a hora (HH:MM). Los cambios se sincronizarán automáticamente.`
@@ -176,7 +176,7 @@ export default function Settings() {
             })
         } finally {
             setIsConvertingTimes(false)
-            
+
             // Limpiar mensaje después de 5 segundos
             setTimeout(() => {
                 setTimeConversionResult(null)
@@ -188,21 +188,21 @@ export default function Settings() {
     const cleanOldBackups = async () => {
         setIsCleaningBackups(true)
         setBackupResult(null)
-        
+
         try {
             console.log('🧹 Iniciando limpieza automática de backups...')
-            
+
             const response = await fetch(`${API_BASE_URL}/api/health/cleanup-backups`, {
                 method: 'POST'
             })
-            
+
             if (response.ok) {
                 const data = await response.json()
                 console.log('✅ Limpieza completada:', data)
-                
+
                 // Recargar la lista de backups
                 await loadBackups()
-                
+
                 setBackupResult({
                     type: 'success',
                     message: data.message || 'Limpieza de backups completada. Se mantuvieron solo los 5 más recientes.'
@@ -219,7 +219,7 @@ export default function Settings() {
             })
         } finally {
             setIsCleaningBackups(false)
-            
+
             // Limpiar mensaje después de 5 segundos
             setTimeout(() => {
                 setBackupResult(null)
@@ -233,7 +233,7 @@ export default function Settings() {
             console.error('No se especificó el nombre del archivo')
             return
         }
-        
+
         // Confirmación del usuario
         const confirmed = window.confirm(
             `¿Estás seguro de que quieres restaurar el backup "${filename}"?\n\n` +
@@ -243,15 +243,15 @@ export default function Settings() {
             `• No se puede deshacer fácilmente\n\n` +
             `¿Continuar con la restauración?`
         )
-        
+
         if (!confirmed) return
-        
+
         setIsRestoringBackup(filename)
         setBackupResult(null)
-        
+
         try {
             console.log('🔄 Iniciando restauración de backup:', filename)
-            
+
             const response = await fetch(`${API_BASE_URL}/api/health/restore-backup`, {
                 method: 'POST',
                 headers: {
@@ -259,26 +259,26 @@ export default function Settings() {
                 },
                 body: JSON.stringify({ filename })
             })
-            
+
             if (response.ok) {
                 const data = await response.json()
                 console.log('✅ Backup restaurado exitosamente:', data)
-                
+
                 // Recargar la lista de backups para mostrar el nuevo backup creado
                 await loadBackups()
-                
+
                 setBackupResult({
                     type: 'success',
                     message: `✅ Excel restaurado exitosamente desde "${filename}". ${data.currentBackup ? `Se creó un backup del estado anterior: "${data.currentBackup}"` : ''}`
                 })
-                
+
                 // Limpiar caché local para forzar recarga
                 if (typeof window !== 'undefined' && window.localStorage) {
                     const keys = Object.keys(localStorage).filter(key => key.startsWith('excel_cache_'))
                     keys.forEach(key => localStorage.removeItem(key))
                     console.log('🧹 Caché local limpiado para forzar recarga')
                 }
-                
+
             } else {
                 const errorData = await response.json()
                 throw new Error(errorData.message || 'Error al restaurar backup')
@@ -291,7 +291,7 @@ export default function Settings() {
             })
         } finally {
             setIsRestoringBackup(null)
-            
+
             // Limpiar mensaje después de 10 segundos (más tiempo para restauración)
             setTimeout(() => {
                 setBackupResult(null)
@@ -303,14 +303,14 @@ export default function Settings() {
     const loadBackups = async () => {
         setIsLoadingBackups(true)
         setBackupResult(null)
-        
+
         try {
             const response = await fetch(`${API_BASE_URL}/api/health/backups`)
-            
+
             if (response.ok) {
                 const data = await response.json()
                 setBackups(data.backups || [])
-                
+
                 if (data.backups.length === 0) {
                     setBackupResult({
                         type: 'info',
@@ -336,15 +336,15 @@ export default function Settings() {
         if (!confirm(`¿Estás seguro de que quieres eliminar el backup "${filename}"?`)) {
             return
         }
-        
+
         setIsDeletingBackup(filename)
         setBackupResult(null)
-        
+
         try {
             const response = await fetch(`${API_BASE_URL}/api/health/backups/${encodeURIComponent(filename)}`, {
                 method: 'DELETE'
             })
-            
+
             if (response.ok) {
                 // Recargar la lista de backups
                 await loadBackups()
@@ -364,7 +364,7 @@ export default function Settings() {
             })
         } finally {
             setIsDeletingBackup(null)
-            
+
             // Limpiar mensaje después de 5 segundos
             setTimeout(() => {
                 setBackupResult(null)
@@ -377,15 +377,15 @@ export default function Settings() {
         if (!confirm(`¿Estás seguro de que quieres eliminar TODOS los backups? Esta acción no se puede deshacer.`)) {
             return
         }
-        
+
         setIsLoadingBackups(true)
         setBackupResult(null)
-        
+
         try {
             const response = await fetch(`${API_BASE_URL}/api/health/backups`, {
                 method: 'DELETE'
             })
-            
+
             if (response.ok) {
                 const data = await response.json()
                 setBackups([])
@@ -405,7 +405,7 @@ export default function Settings() {
             })
         } finally {
             setIsLoadingBackups(false)
-            
+
             // Limpiar mensaje después de 5 segundos
             setTimeout(() => {
                 setBackupResult(null)
@@ -422,7 +422,7 @@ export default function Settings() {
         <div className="space-y-4 pb-20">
             {/* Sección de Google Drive */}
             <Drive />
-            
+
             {/* Sección de Herramientas de Excel */}
             {hasSelectedFile && (
                 <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -438,13 +438,12 @@ export default function Settings() {
 
                     {/* Mensaje de resultado */}
                     {cleanupResult && (
-                        <div className={`mb-4 p-4 rounded-lg flex items-center space-x-2 ${
-                            cleanupResult.type === 'success' 
+                        <div className={`mb-4 p-4 rounded-lg flex items-center space-x-2 ${cleanupResult.type === 'success'
                                 ? 'bg-green-50 text-green-800 border border-green-200'
                                 : cleanupResult.type === 'error'
-                                ? 'bg-red-50 text-red-800 border border-red-200'
-                                : 'bg-blue-50 text-blue-800 border border-blue-200'
-                        }`}>
+                                    ? 'bg-red-50 text-red-800 border border-red-200'
+                                    : 'bg-blue-50 text-blue-800 border border-blue-200'
+                            }`}>
                             {cleanupResult.type === 'success' && <CheckCircle className="w-5 h-5" />}
                             {cleanupResult.type === 'error' && <AlertTriangle className="w-5 h-5" />}
                             {cleanupResult.type === 'info' && <AlertTriangle className="w-5 h-5" />}
@@ -454,13 +453,12 @@ export default function Settings() {
 
                     {/* Mensaje de resultado para conversión de horas */}
                     {timeConversionResult && (
-                        <div className={`mb-4 p-4 rounded-lg flex items-center space-x-2 ${
-                            timeConversionResult.type === 'success' 
+                        <div className={`mb-4 p-4 rounded-lg flex items-center space-x-2 ${timeConversionResult.type === 'success'
                                 ? 'bg-green-50 text-green-800 border border-green-200'
                                 : timeConversionResult.type === 'error'
-                                ? 'bg-red-50 text-red-800 border border-red-200'
-                                : 'bg-blue-50 text-blue-800 border border-blue-200'
-                        }`}>
+                                    ? 'bg-red-50 text-red-800 border border-red-200'
+                                    : 'bg-blue-50 text-blue-800 border border-blue-200'
+                            }`}>
                             {timeConversionResult.type === 'success' && <CheckCircle className="w-5 h-5" />}
                             {timeConversionResult.type === 'error' && <AlertTriangle className="w-5 h-5" />}
                             {timeConversionResult.type === 'info' && <Clock className="w-5 h-5" />}
@@ -484,7 +482,7 @@ export default function Settings() {
                                     <span>Los cambios se guardarán automáticamente en Google Drive</span>
                                 </div>
                             </div>
-                            
+
                             <button
                                 onClick={cleanEmptyRows}
                                 disabled={isCleaningRows || cacheStatus.isSaving}
@@ -521,7 +519,7 @@ export default function Settings() {
                                     <span>Los cambios se guardarán automáticamente en Google Drive</span>
                                 </div>
                             </div>
-                            
+
                             <button
                                 onClick={convertDecimalTimes}
                                 disabled={isConvertingTimes || cacheStatus.isSaving}
@@ -552,7 +550,7 @@ export default function Settings() {
                                 <div>Archivo: {selectedFile.name}</div>
                                 <div>Hojas: {cachedData.sheetNames?.length || 0}</div>
                                 <div>
-                                    Total de filas: {cachedData.sheetNames?.reduce((total, sheetName) => 
+                                    Total de filas: {cachedData.sheetNames?.reduce((total, sheetName) =>
                                         total + (cachedData.sheets?.[sheetName]?.length || 0), 0
                                     ) || 0}
                                 </div>
@@ -628,11 +626,10 @@ export default function Settings() {
 
                 {/* Mensaje de resultado */}
                 {backupResult && (
-                    <div className={`mb-4 p-3 rounded-lg flex items-center space-x-2 ${
-                        backupResult.type === 'success' ? 'bg-green-50 text-green-800' :
-                        backupResult.type === 'error' ? 'bg-red-50 text-red-800' :
-                        'bg-blue-50 text-blue-800'
-                    }`}>
+                    <div className={`mb-4 p-3 rounded-lg flex items-center space-x-2 ${backupResult.type === 'success' ? 'bg-green-50 text-green-800' :
+                            backupResult.type === 'error' ? 'bg-red-50 text-red-800' :
+                                'bg-blue-50 text-blue-800'
+                        }`}>
                         {backupResult.type === 'success' ? (
                             <CheckCircle className="w-4 h-4" />
                         ) : backupResult.type === 'error' ? (
@@ -665,7 +662,7 @@ export default function Settings() {
                         <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
                             <span>Se encontraron {backups.length} backup(s)</span>
                             <span>
-                                Tamaño total: {backups.reduce((sum, backup) => sum + backup.size, 0) > 0 
+                                Tamaño total: {backups.reduce((sum, backup) => sum + backup.size, 0) > 0
                                     ? (backups.reduce((sum, backup) => sum + backup.size, 0) / 1024 / 1024).toFixed(2) + ' MB'
                                     : '0 MB'
                                 }
@@ -716,18 +713,18 @@ export default function Settings() {
                                             disabled={isDeletingBackup === backup.filename || isRestoringBackup === backup.filename}
                                             className="bg-red-100 hover:bg-red-200 disabled:bg-red-50 text-red-700 disabled:text-red-400 px-3 py-1 rounded-lg transition-colors duration-200 flex items-center space-x-1"
                                         >
-                                        {isDeletingBackup === backup.filename ? (
-                                            <>
-                                                <RefreshCw className="w-3 h-3 animate-spin" />
-                                                <span className="text-xs">Eliminando...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Trash2 className="w-3 h-3" />
-                                                <span className="text-xs">Eliminar</span>
-                                            </>
-                                        )}
-                                    </button>
+                                            {isDeletingBackup === backup.filename ? (
+                                                <>
+                                                    <RefreshCw className="w-3 h-3 animate-spin" />
+                                                    <span className="text-xs">Eliminando...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Trash2 className="w-3 h-3" />
+                                                    <span className="text-xs">Eliminar</span>
+                                                </>
+                                            )}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
