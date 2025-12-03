@@ -97,16 +97,25 @@ router.get('/content', authenticateToken, async (req, res) => {
     // Extract student data
     const students = [];
     if (headerRowIndex !== -1) {
+      const indexCol = headers.findIndex(h =>
+        h && (h.toString().trim() === '#' || h.toString().toLowerCase().includes('no.'))
+      );
       const nombreCol = headers.findIndex(h =>
         h && h.toString().toLowerCase().includes('nombre')
       );
-      const matriculaCol = headers.findIndex(h =>
-        h && (h.toString().toLowerCase().includes('control') ||
-          h.toString().toLowerCase().includes('matricula') ||
-          h.toString().toLowerCase().includes('num'))
-      );
+      const matriculaCol = headers.findIndex(h => {
+        if (!h) return false;
+        const headerText = h.toString().toLowerCase();
+        return headerText.includes('control') ||
+          headerText.includes('matricula') ||
+          (headerText.includes('número') && headerText.includes('control')) ||
+          (headerText.includes('numero') && headerText.includes('control'));
+      });
       const carreraCol = headers.findIndex(h =>
         h && h.toString().toLowerCase().includes('carrera')
+      );
+      const horaCol = headers.findIndex(h =>
+        h && (h.toString().toLowerCase().includes('hora') || h.toString().toLowerCase().includes('entrada'))
       );
 
       for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
@@ -122,6 +131,10 @@ router.get('/content', authenticateToken, async (req, res) => {
             nombre,
             matricula,
             carrera,
+            nombre,
+            matricula,
+            carrera,
+            horaEntrada: horaCol !== -1 ? row[horaCol] : '',
             rowIndex: i
           });
         }
@@ -386,14 +399,19 @@ router.post('/add-row', authenticateToken, async (req, res) => {
       ).join(' ');
 
       const hasNombre = rowText.includes('NOMBRE');
-      const hasControl = rowText.includes('CONTROL') || rowText.includes('NUM');
+      const hasControl = rowText.includes('CONTROL') || rowText.includes('MATRICULA');
       const hasCarrera = rowText.includes('CARRERA');
+      const hasHora = rowText.includes('HORA') || rowText.includes('ENTRADA');
 
-      const matchCount = [hasNombre, hasControl, hasCarrera].filter(Boolean).length;
+      const matchCount = [hasNombre, hasControl, hasCarrera, hasHora].filter(Boolean).length;
+
+      console.log(`Row ${i}: ${rowText}`);
+      console.log(`Matches: Nombre=${hasNombre}, Control=${hasControl}, Carrera=${hasCarrera}, Hora=${hasHora}`);
 
       if (matchCount >= 2) {
         headerRowIndex = i;
         headerRow = row;
+        console.log('Header row found at index ' + i);
         break;
       }
     }
@@ -403,16 +421,20 @@ router.post('/add-row', authenticateToken, async (req, res) => {
     headerRow.forEach((header, index) => {
       const headerText = header ? header.toString().trim().toUpperCase() : '';
 
-      if (headerText.includes('CONTROL') || (headerText.includes('NUM') && headerText.includes('DE'))) {
+      if (headerText === '#' || headerText.includes('NO.')) {
+        columnMapping['index'] = index;
+      } else if (headerText.includes('CONTROL') || headerText.includes('MATRICULA') || (headerText.includes('NUMERO') && headerText.includes('CONTROL'))) {
         columnMapping['matricula'] = index;
-      } else if (headerText.includes('NOMBRE') && !headerText.includes('NUM')) {
+      } else if (headerText.includes('NOMBRE')) {
         columnMapping['nombre'] = index;
       } else if (headerText.includes('CARRERA')) {
         columnMapping['carrera'] = index;
-      } else if (headerText.includes('HORA')) {
+      } else if (headerText.includes('HORA') || headerText.includes('ENTRADA')) {
         columnMapping['hora_entrada'] = index;
       }
     });
+
+    console.log('Column Mapping:', columnMapping);
 
     if (!columnMapping['matricula'] || !columnMapping['nombre'] || !columnMapping['carrera']) {
       return res.status(400).json({
@@ -443,9 +465,24 @@ router.post('/add-row', authenticateToken, async (req, res) => {
       newRow[col] = '';
     }
 
-    newRow[columnMapping['matricula']] = matricula;
-    newRow[columnMapping['nombre']] = nombre;
-    newRow[columnMapping['carrera']] = carrera;
+    if (columnMapping['index'] !== undefined) {
+      // Calculate max index from existing data
+      let maxIndex = 0;
+      for (let r = headerRowIndex + 1; r < jsonData.length; r++) {
+        const row = jsonData[r];
+        if (!row) continue;
+        const val = row[columnMapping['index']];
+        if (val && !isNaN(val)) {
+          maxIndex = Math.max(maxIndex, parseInt(val));
+        }
+      }
+      newRow[columnMapping['index']] = maxIndex + 1;
+    }
+
+    // Ensure we are writing to the correct indices
+    if (columnMapping['matricula'] !== undefined) newRow[columnMapping['matricula']] = matricula;
+    if (columnMapping['nombre'] !== undefined) newRow[columnMapping['nombre']] = nombre;
+    if (columnMapping['carrera'] !== undefined) newRow[columnMapping['carrera']] = carrera;
 
     if (columnMapping['hora_entrada'] !== undefined) {
       const now = new Date();

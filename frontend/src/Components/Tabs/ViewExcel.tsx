@@ -488,8 +488,8 @@ export default function ViewExcel() {
             onClick={syncWithDrive}
             disabled={cacheStatus.isSaving}
             className={`${isOfflineMode
-                ? 'bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400'
-                : 'bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400'
+              ? 'bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400'
+              : 'bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400'
               } text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2`}
             title={isOfflineMode ? 'Intentar reconectar y sincronizar' : 'Sincronizar con Google Drive'}
           >
@@ -622,9 +622,6 @@ export default function ViewExcel() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    #
-                  </th>
                   {headers.map((header, index) => (
                     <th
                       key={index}
@@ -664,15 +661,6 @@ export default function ViewExcel() {
                   // Fila normal de datos
                   return (
                     <tr key={rowIndex} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {(() => {
-                          const totalDataRows = getDataRowsCount()
-                          const currentRowInPage = rowIndex + 1
-                          const rowsBeforeCurrentPage = (currentPage - 1) * rowsPerPage
-                          // Calcular el número de fila original (desde el final hacia el principio)
-                          return totalDataRows - rowsBeforeCurrentPage - currentRowInPage + 1
-                        })()}
-                      </td>
                       {headers.map((_, colIndex) => {
                         const cellValue = rowData.data[colIndex]
                         const formattedValue = formatCellValue(cellValue)
@@ -684,10 +672,10 @@ export default function ViewExcel() {
                           <td
                             key={colIndex}
                             className={`px-4 py-3 text-sm max-w-xs relative group ${isRowModified
-                                ? 'bg-orange-50 border-l-2 border-orange-400'
-                                : isCellModified
-                                  ? 'bg-yellow-50 border-l-2 border-yellow-400'
-                                  : ''
+                              ? 'bg-orange-50 border-l-2 border-orange-400'
+                              : isCellModified
+                                ? 'bg-yellow-50 border-l-2 border-yellow-400'
+                                : ''
                               }`}
                             title={formattedValue}
                           >

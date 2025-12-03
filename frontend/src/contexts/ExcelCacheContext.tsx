@@ -26,6 +26,7 @@ interface ExcelCacheContextType {
   updateCellValue: (sheetName: string, rowIndex: number, colIndex: number, value: any) => void
   addRowToCache: (rowData: any[]) => void
   ensureCurrentDateRow: () => void
+  addStudentRow: (studentData: { nombre: string, matricula: string, carrera: string, horaEntrada: string }) => void
   isOfflineMode: boolean
 }
 
@@ -56,7 +57,7 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
       // Intentar cargar desde localStorage primero (PRIORIDAD)
       const cacheKey = `excel_cache_${selectedFile.id}`
       const cachedString = localStorage.getItem(cacheKey)
-      
+
       if (cachedString) {
         console.log('📁 Cargando Excel desde caché local (offline-ready)')
         const cached = JSON.parse(cachedString)
@@ -67,7 +68,7 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
           lastSaved: new Date(cached.timestamp),
           lastSynced: new Date(cached.lastSynced || cached.timestamp)
         }))
-        
+
         // Si tenemos datos locales, la vista ya está lista
         // Solo intentar sincronizar en segundo plano (sin bloquear la UI)
         console.log('🔄 Sincronización en segundo plano...')
@@ -76,7 +77,7 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
           setIsOfflineMode(true)
           // No mostrar error al usuario, solo log
         })
-        
+
         return // Salir aquí, ya tenemos los datos locales
       }
 
@@ -128,7 +129,7 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
       // Si hay cambios sin guardar, sincronizar hacia Drive
       if (cacheStatus.hasUnsavedChanges && cachedData) {
         console.log('Sincronizando cambios locales a Drive...', cachedData)
-        
+
         const syncResponse = await fetch(`${API_BASE_URL}/api/drive/sync`, {
           method: 'POST',
           headers: {
@@ -146,12 +147,12 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
           console.error('❌ Error en respuesta de sync:', errorData)
           console.error('❌ Status:', syncResponse.status)
           console.error('❌ Error code:', errorData.code)
-          
+
           // Solo cerrar sesión si es 401 (token expirado)
           // NO cerrar sesión en 403 porque puede ser un problema temporal de permisos
           if (syncResponse.status === 401) {
             console.error('🚨 Token expirado. Cerrando sesión...')
-            
+
             // Mostrar alerta al usuario
             if (typeof window !== 'undefined' && (window as any).Swal) {
               (window as any).Swal.fire({
@@ -173,16 +174,16 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
                 authContext.signOut()
               }
             }
-            
+
             throw new Error('Session expired. Please sign in again.')
           }
-          
+
           // Para 403, solo mostrar el error sin cerrar sesión
           if (syncResponse.status === 403) {
             console.error('⚠️ Access denied:', errorData.error)
             throw new Error(errorData.error || 'Access denied. Check file permissions.')
           }
-          
+
           throw new Error(errorData.error || 'Error al sincronizar cambios con Drive')
         }
 
@@ -198,7 +199,7 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
         }
 
         localStorage.setItem(cacheKey, JSON.stringify(cacheData))
-        
+
         setCacheStatus(prev => ({
           ...prev,
           lastSynced: new Date(),
@@ -208,7 +209,7 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
       } else {
         // Si no hay cambios, solo descargar la versión más reciente de Drive
         console.log('No hay cambios locales, descargando desde Drive...')
-        
+
         const response = await fetch(`${API_BASE_URL}/api/drive/content?fileId=${selectedFile.id}`, {
           headers: {
             'Authorization': `Bearer ${user?.accessToken}`,
@@ -220,7 +221,7 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
         }
 
         const driveData = await response.json()
-        
+
         // Actualizar caché local con datos de Drive
         const cacheKey = `excel_cache_${selectedFile.id}`
         const cacheData = {
@@ -236,14 +237,14 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
           lastSynced: new Date(),
           hasUnsavedChanges: false
         }))
-        
+
         // Resetear modo offline si la sincronización fue exitosa
         setIsOfflineMode(false)
       }
 
     } catch (error) {
       console.warn('⚠️ Error sincronizando con Drive (modo offline):', error)
-      
+
       // No mostrar error al usuario si estamos en modo offline
       // Solo registrar para debugging
       const isNetworkError = error instanceof Error && (
@@ -253,7 +254,7 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
         error.message.includes('401') ||
         error.message.includes('403')
       )
-      
+
       if (isNetworkError) {
         console.log('🔌 Modo offline detectado, continuando con datos locales')
         setIsOfflineMode(true)
@@ -295,7 +296,7 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
     const newData = { ...cachedData }
     const sheetName = newData.sheetNames[0] // Usar la primera hoja
     const sheetData = [...newData.sheets[sheetName]]
-    
+
     // Agregar nueva fila al final
     sheetData.push(rowData)
     newData.sheets[sheetName] = sheetData
@@ -309,12 +310,12 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
 
     const newData = { ...cachedData }
     const sheetData = [...newData.sheets[sheetName]]
-    
+
     // Asegurar que la fila existe
     if (!sheetData[rowIndex]) {
       sheetData[rowIndex] = []
     }
-    
+
     // Actualizar el valor
     sheetData[rowIndex][colIndex] = value
     newData.sheets[sheetName] = sheetData
@@ -329,11 +330,11 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
       'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
       'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
     ]
-    
+
     const day = now.getDate()
     const month = months[now.getMonth()]
     const year = now.getFullYear()
-    
+
     return `${day} de ${month} del ${year}`
   }
 
@@ -342,7 +343,7 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
     if (!row || row.length === 0) return false
     const firstCell = row[0]
     if (!firstCell || typeof firstCell !== 'string') return false
-    
+
     // Patrones para detectar fechas en español
     const datePatterns = [
       /^\d{1,2}\s+de\s+\w+\s+del?\s+\d{4}$/i, // "13 de octubre del 2025"
@@ -350,7 +351,7 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
       /^\d{4}-\d{2}-\d{2}$/,                   // "2025-10-13"
       /^\w+,?\s+\d{1,2}\s+de\s+\w+\s+del?\s+\d{4}$/i // "Domingo, 13 de octubre del 2025"
     ]
-    
+
     return datePatterns.some(pattern => pattern.test(firstCell.trim()))
   }
 
@@ -380,8 +381,8 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
 
     console.log('📝 Creando fila de fecha actual...')
 
-    // Crear nueva fila de fecha (solo en la primera columna)
-    const dateRow = [currentDateStr, '', '', '', '', '', '']
+    // Crear nueva fila de fecha (5 columnas para mantener consistencia)
+    const dateRow = [currentDateStr, '', '', '', '']
 
     // Crear nueva data con la fila de fecha agregada
     const newData = { ...cachedData }
@@ -390,6 +391,61 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
 
     saveToCache(newData)
     console.log('✅ Fila de fecha actual creada')
+  }, [cachedData, saveToCache])
+
+  // Agregar estudiante con lógica de auto-incremento y formato correcto
+  const addStudentRow = useCallback((studentData: { nombre: string, matricula: string, carrera: string, horaEntrada: string }) => {
+    if (!cachedData || !cachedData.sheetNames.length) return
+
+    const sheetName = cachedData.sheetNames[0]
+    const sheetData = [...cachedData.sheets[sheetName]]
+    const currentDateStr = formatCurrentDate()
+
+    // 1. Asegurar fila de fecha (Atomic check)
+    const hasCurrentDate = sheetData.some(row => {
+      if (isDateRow(row)) {
+        const rowDateStr = row[0]?.toString().trim()
+        return rowDateStr === currentDateStr
+      }
+      return false
+    })
+
+    if (!hasCurrentDate) {
+      // Crear nueva fila de fecha (5 columnas para mantener consistencia)
+      sheetData.push([currentDateStr, '', '', '', ''])
+    }
+
+    // 2. Calcular siguiente índice
+    let maxIndex = 0
+    sheetData.forEach(row => {
+      if (!isDateRow(row) && Array.isArray(row) && row.length > 0) {
+        const firstCell = row[0]
+        if (firstCell && !isNaN(firstCell as any)) {
+          const val = parseInt(firstCell.toString())
+          if (!isNaN(val) && val > maxIndex) {
+            maxIndex = val
+          }
+        }
+      }
+    })
+    const nextIndex = maxIndex + 1
+
+    // 3. Crear fila de estudiante (5 columnas: #, Nombre, Matricula, Carrera, Hora)
+    const newRow = [
+      nextIndex,
+      studentData.nombre,
+      studentData.matricula,
+      studentData.carrera,
+      studentData.horaEntrada
+    ]
+
+    sheetData.push(newRow)
+
+    // 4. Guardar
+    const newData = { ...cachedData }
+    newData.sheets[sheetName] = sheetData
+    saveToCache(newData)
+
   }, [cachedData, saveToCache])
 
   // Cargar caché cuando cambie el archivo seleccionado
@@ -419,6 +475,7 @@ export function ExcelCacheProvider({ children }: { children: React.ReactNode }) 
       updateCellValue,
       addRowToCache,
       ensureCurrentDateRow,
+      addStudentRow,
       isOfflineMode
     }}>
       {children}

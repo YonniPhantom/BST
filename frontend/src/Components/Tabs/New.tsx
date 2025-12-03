@@ -8,14 +8,14 @@ import { API_BASE_URL } from '../../shared/Api'
 
 export default function New() {
   const { selectedFile, hasSelectedFile } = useSelectedFile()
-  const { addRowToCache, ensureCurrentDateRow } = useExcelCache()
-  const { 
-    students, 
-    isLoaded, 
-    isLoading: studentsLoading, 
-    loadStudents, 
-    searchStudents, 
-    addStudent, 
+  const { addStudentRow } = useExcelCache()
+  const {
+    students,
+    isLoaded,
+    isLoading: studentsLoading,
+    loadStudents,
+    searchStudents,
+    addStudent,
     error: studentsError,
     isSyncing,
   } = useStudentsData()
@@ -29,7 +29,7 @@ export default function New() {
     nombre: '',
     carrera: ''
   })
-  
+
   // Estados para autocompletado
   const [suggestions, setSuggestions] = useState<any[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -74,7 +74,7 @@ export default function New() {
   // Cargar registros al cargar el componente
   useEffect(() => {
     fetchTodayRegistrations();
-    
+
     // Cargar estudiantes si hay archivo seleccionado
     if (hasSelectedFile && !isLoaded && !studentsLoading) {
       loadStudents();
@@ -90,13 +90,13 @@ export default function New() {
     }
 
     setIsSearching(true)
-    
+
     // Usar búsqueda en memoria
     const results = searchStudents(query)
     setSuggestions(results)
     setShowSuggestions(results.length > 0)
     setActiveSuggestionIndex(-1)
-    
+
     setIsSearching(false)
   }
 
@@ -150,13 +150,13 @@ export default function New() {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
-        setActiveSuggestionIndex(prev => 
+        setActiveSuggestionIndex(prev =>
           prev < suggestions.length - 1 ? prev + 1 : 0
         )
         break
       case 'ArrowUp':
         e.preventDefault()
-        setActiveSuggestionIndex(prev => 
+        setActiveSuggestionIndex(prev =>
           prev > 0 ? prev - 1 : suggestions.length - 1
         )
         break
@@ -190,7 +190,7 @@ export default function New() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!hasSelectedFile || !selectedFile) {
       setRegistrationMessage({
         type: 'error',
@@ -201,7 +201,7 @@ export default function New() {
 
     setIsRegistering(true);
     setRegistrationMessage(null);
-    
+
     try {
       // Si es un estudiante nuevo, agregarlo a la memoria
       if (isNewStudent) {
@@ -211,7 +211,7 @@ export default function New() {
           matricula: formData.matricula.trim(),
           carrera: formData.carrera.trim()
         }
-        
+
         // Agregar a memoria (con sincronización automática)
         await addStudent(studentData)
         console.log('✅ Estudiante agregado y sincronizado exitosamente')
@@ -219,28 +219,19 @@ export default function New() {
 
       // Obtener hora local actual en formato HH:MM
       const now = new Date();
-      const horaEntrada = now.toLocaleTimeString('es-MX', { 
-        hour: '2-digit', 
+      const horaEntrada = now.toLocaleTimeString('es-MX', {
+        hour: '2-digit',
         minute: '2-digit',
-        hour12: false 
+        hour12: false
       });
 
-      // Crear la nueva fila de datos
-      const newRowData = [
-        formData.nombre.trim(),     // Columna 0: Nombre
-        formData.matricula.trim(),  // Columna 1: Número de control
-        '',                         // Columna 2: Préstamo (vacío)
-        formData.carrera,          // Columna 3: Carrera
-        '',                        // Columna 4: Correo (vacío)
-        '',                        // Columna 5: Teléfono (vacío)
-        horaEntrada                // Columna 6: Hora de entrada
-      ];
-
-      // Asegurar que existe la fila de fecha actual antes de agregar el registro
-      ensureCurrentDateRow();
-      
-      // Agregar al caché local (se sincronizará automáticamente)
-      addRowToCache(newRowData);
+      // Agregar estudiante usando la nueva función del contexto
+      addStudentRow({
+        nombre: formData.nombre.trim(),
+        matricula: formData.matricula.trim(),
+        carrera: formData.carrera.trim(),
+        horaEntrada: horaEntrada
+      });
 
       // Guardar también en la base de datos SQLite
       try {
@@ -275,10 +266,10 @@ export default function New() {
       }
 
       // Registro exitoso
-      const successMessage = isNewStudent 
+      const successMessage = isNewStudent
         ? `¡Nuevo estudiante ${formData.nombre.trim()} agregado y registrado exitosamente a las ${horaEntrada}!`
         : `¡Estudiante ${formData.nombre.trim()} registrado exitosamente a las ${horaEntrada}!`
-      
+
       setRegistrationMessage({
         type: 'success',
         text: successMessage
@@ -335,11 +326,11 @@ export default function New() {
     setIsQuickSearching(true);
     setQuickSearchMessage(null);
     setQuickSearchResult(null);
-    
+
     try {
       // Buscar en la lista de estudiantes cargados
       const results = searchStudents(quickSearchMatricula.trim());
-      
+
       if (results.length > 0) {
         // Encontrado - mostrar diálogo de confirmación
         const student = results[0];
@@ -378,32 +369,23 @@ export default function New() {
 
     setShowConfirmDialog(false);
     setIsRegistering(true);
-    
+
     try {
       // Obtener hora local actual en formato HH:MM
       const now = new Date();
-      const horaEntrada = now.toLocaleTimeString('es-MX', { 
-        hour: '2-digit', 
+      const horaEntrada = now.toLocaleTimeString('es-MX', {
+        hour: '2-digit',
         minute: '2-digit',
-        hour12: false 
+        hour12: false
       });
 
-      // Crear la nueva fila de datos
-      const newRowData = [
-        quickSearchResult.nombre,     // Columna 0: Nombre
-        quickSearchResult.matricula,  // Columna 1: Número de control
-        '',                            // Columna 2: Préstamo (vacío)
-        quickSearchResult.carrera,    // Columna 3: Carrera
-        '',                            // Columna 4: Correo (vacío)
-        '',                            // Columna 5: Teléfono (vacío)
-        horaEntrada                    // Columna 6: Hora de entrada
-      ];
-
-      // Asegurar que existe la fila de fecha actual antes de agregar el registro
-      ensureCurrentDateRow();
-      
-      // Agregar al caché local (se sincronizará automáticamente)
-      addRowToCache(newRowData);
+      // Agregar estudiante usando la nueva función del contexto
+      addStudentRow({
+        nombre: quickSearchResult.nombre,
+        matricula: quickSearchResult.matricula,
+        carrera: quickSearchResult.carrera,
+        horaEntrada: horaEntrada
+      });
 
       // Guardar también en la base de datos SQLite
       try {
@@ -532,7 +514,7 @@ export default function New() {
       </div>
 
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto'>
-        
+
         {/* Búsqueda Rápida y Registro Manual */}
         <div className='lg:col-span-2 space-y-6'>
           {/* Búsqueda Rápida */}
@@ -549,13 +531,12 @@ export default function New() {
 
             {/* Mensaje de estado de búsqueda rápida */}
             {quickSearchMessage && (
-              <div className={`p-4 rounded-lg mb-4 ${
-                quickSearchMessage.type === 'success' 
-                  ? 'bg-green-50 border border-green-200 text-green-800'
-                  : quickSearchMessage.type === 'error'
+              <div className={`p-4 rounded-lg mb-4 ${quickSearchMessage.type === 'success'
+                ? 'bg-green-50 border border-green-200 text-green-800'
+                : quickSearchMessage.type === 'error'
                   ? 'bg-red-50 border border-red-200 text-red-800'
                   : 'bg-blue-50 border border-blue-200 text-blue-800'
-              }`}>
+                }`}>
                 <div className='flex items-center gap-2'>
                   {quickSearchMessage.type === 'success' ? (
                     <div className='w-5 h-5 rounded-full bg-green-500 flex items-center justify-center'>
@@ -666,11 +647,10 @@ export default function New() {
 
             {/* Mensaje de estado */}
             {registrationMessage && (
-              <div className={`p-4 rounded-lg mb-4 ${
-                registrationMessage.type === 'success' 
-                  ? 'bg-green-50 border border-green-200 text-green-800' 
-                  : 'bg-red-50 border border-red-200 text-red-800'
-              }`}>
+              <div className={`p-4 rounded-lg mb-4 ${registrationMessage.type === 'success'
+                ? 'bg-green-50 border border-green-200 text-green-800'
+                : 'bg-red-50 border border-red-200 text-red-800'
+                }`}>
                 <div className='flex items-center gap-2'>
                   {registrationMessage.type === 'success' ? (
                     <div className='w-5 h-5 rounded-full bg-green-500 flex items-center justify-center'>
@@ -717,7 +697,7 @@ export default function New() {
                     <Search className='absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400' />
                   )}
                 </div>
-                
+
                 {/* Lista de Sugerencias */}
                 {showSuggestions && suggestions.length > 0 && (
                   <div className='absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto'>
@@ -725,9 +705,8 @@ export default function New() {
                       <div
                         key={`${student.matricula}-${index}`}
                         ref={el => { suggestionRefs.current[index] = el }}
-                        className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 hover:bg-blue-50 ${
-                          index === activeSuggestionIndex ? 'bg-blue-50' : ''
-                        }`}
+                        className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 hover:bg-blue-50 ${index === activeSuggestionIndex ? 'bg-blue-50' : ''
+                          }`}
                         onClick={() => selectSuggestion(student)}
                       >
                         <div className='flex items-center justify-between'>
@@ -826,7 +805,7 @@ export default function New() {
                 <p className='text-sm text-gray-600'>{todayRegistrations.length} estudiantes registrados</p>
               </div>
             </div>
-            
+
           </div>
 
           {/* Contenedor con altura fija y scroll */}
@@ -858,11 +837,10 @@ export default function New() {
                       <p className='truncate'>{student.carrera}</p>
                     </div>
                     <div className='mt-2 flex justify-between items-center'>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        student.tipo_registro === 'QR/Código' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${student.tipo_registro === 'QR/Código'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-green-100 text-green-800'
+                        }`}>
                         {student.tipo_registro}
                       </span>
                     </div>
